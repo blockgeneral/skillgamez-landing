@@ -147,7 +147,7 @@ a:hover{color:#ffd60a;}
     <h2 data-reveal="1" style="margin:0 0 clamp(28px,4vw,44px);font-family:'Bungee';font-weight:400;font-size:clamp(34px,6vw,64px);color:#eafaff;transform:rotate(1deg);text-shadow:4px 4px 0 #00f0ff;opacity:0;transition:opacity .6s,transform .6s;">THE <span style="color:#ff2bd6;">GAMES</span></h2>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:clamp(18px,3vw,30px);">
 
-      <div data-reveal="1" style="position:relative;border:3px solid #ffd60a;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1.2deg);transition:transform .25s,box-shadow .25s,opacity .6s;opacity:0;" style-hover="transform:rotate(0deg) scale(1.025) translateY(-6px);box-shadow:0 0 40px rgba(255,214,10,.5);">
+      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #ffd60a;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1.2deg);transition:transform .25s,box-shadow .25s,opacity .6s;opacity:0;" style-hover="transform:rotate(var(--tw,1.6deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(255,214,10,.5);">
         <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#ffd60a;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(3deg);animation:wiggle 3s ease-in-out infinite;box-shadow:3px 3px 0 #ff2bd6;">IN DEVELOPMENT</div>
         <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #ffd60a;">
           <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-quickdraw" shape="rect" src="./art/quick-draw.png" placeholder="GAME ART — QUICK DRAW · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
@@ -161,7 +161,7 @@ a:hover{color:#ffd60a;}
         </div>
       </div>
 
-      <div data-reveal="1" style="position:relative;border:3px solid #00f0ff;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(1deg);transition:transform .25s,box-shadow .25s,opacity .6s .1s;opacity:0;" style-hover="transform:rotate(0deg) scale(1.025) translateY(-6px);box-shadow:0 0 40px rgba(0,240,255,.5);">
+      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #00f0ff;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(1deg);transition:transform .25s,box-shadow .25s,opacity .6s .1s;opacity:0;" style-hover="transform:rotate(var(--tw,-1.6deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(0,240,255,.5);">
         <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#00f0ff;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(-3deg);animation:wiggle 3.4s ease-in-out infinite;box-shadow:3px 3px 0 #ffd60a;">UP NEXT</div>
         <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #00f0ff;">
           <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-simon" shape="rect" src="./art/simon-showdown.png" placeholder="GAME ART — SIMON SHOWDOWN · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
@@ -175,7 +175,7 @@ a:hover{color:#ffd60a;}
         </div>
       </div>
 
-      <div data-reveal="1" style="position:relative;border:3px solid #ff2bd6;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1deg);transition:transform .25s,box-shadow .25s,opacity .6s .2s;opacity:0;" style-hover="transform:rotate(0deg) scale(1.025) translateY(-6px);box-shadow:0 0 40px rgba(255,43,214,.5);">
+      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #ff2bd6;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1deg);transition:transform .25s,box-shadow .25s,opacity .6s .2s;opacity:0;" style-hover="transform:rotate(var(--tw,1.4deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(255,43,214,.5);">
         <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#ff2bd6;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(3deg);animation:wiggle 3.8s ease-in-out infinite;box-shadow:3px 3px 0 #00f0ff;">ROADMAP</div>
         <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #ff2bd6;">
           <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-stickman" shape="rect" src="./art/stickman-fight.png" placeholder="GAME ART — STICKMAN FIGHT · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
@@ -202,7 +202,7 @@ a:hover{color:#ffd60a;}
       <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);border:3px solid #00f0ff;color:#00f0ff;padding:8px 18px;transform:rotate(-1deg);box-shadow:0 0 18px rgba(0,240,255,.4);" style-hover="transform:rotate(0deg) scale(1.06);">CHEAT ONCE = BANNED FOREVER</span>
     </div>
     <div data-reveal="1" style="margin-top:clamp(36px,6vw,56px);opacity:0;transition:opacity .6s .15s,transform .6s .15s;">
-      <a href="#" style="display:inline-block;font-family:'Bungee';font-size:clamp(18px,3vw,26px);color:#05071c;background:#00f0ff;padding:18px 40px;transform:rotate(-2deg);box-shadow:6px 6px 0 #ff2bd6,0 0 34px rgba(0,240,255,.55);transition:transform .2s,box-shadow .2s;" style-hover="transform:rotate(0deg) scale(1.05);box-shadow:6px 6px 0 #ff2bd6,0 0 54px rgba(0,240,255,.85);color:#05071c;" style-active="transform:scale(.97);">FOLLOW TO STAY TUNED →</a>
+      <a href="#" data-twist="1" style="display:inline-block;font-family:'Bungee';font-size:clamp(18px,3vw,26px);color:#05071c;background:#00f0ff;padding:18px 40px;transform:rotate(-2deg);box-shadow:6px 6px 0 #ff2bd6,0 0 34px rgba(0,240,255,.55);transition:transform .2s,box-shadow .2s;" style-hover="transform:rotate(var(--tw,2deg)) scale(1.1);box-shadow:6px 6px 0 #ff2bd6,0 0 54px rgba(0,240,255,.85);color:#05071c;" style-active="transform:scale(.97);">FOLLOW TO STAY TUNED →</a>
       <div style="margin-top:14px;font-size:12px;letter-spacing:.18em;color:#7fa8c9;">TELEGRAM CHANNEL COMING SOON</div>
     </div>
   </section>
@@ -249,8 +249,20 @@ class Component extends DCLogic {
     this.mo = new MutationObserver(() => this.observeAll());
     this.mo.observe(document.body, { childList: true, subtree: true });
     this.retries = [setTimeout(this.observeAll, 800), setTimeout(this.observeAll, 2500)];
+    // random twist on hover: each time the pointer enters a [data-twist] element,
+    // pick a fresh small rotation; style-hover reads it via var(--tw)
+    this.onTwist = (e) => {
+      const el = e.target && e.target.closest && e.target.closest('[data-twist]');
+      if (!el) return;
+      if (e.relatedTarget && el.contains(e.relatedTarget)) return; // moving within the element
+      const mag = 0.8 + Math.random() * 1.6;               // 0.8deg – 2.4deg
+      const sign = Math.random() < 0.5 ? -1 : 1;
+      el.style.setProperty('--tw', (sign * mag).toFixed(2) + 'deg');
+    };
+    document.addEventListener('pointerover', this.onTwist);
   }
   componentWillUnmount() {
+    document.removeEventListener('pointerover', this.onTwist);
     window.removeEventListener('mousemove', this.onMove);
     if (this.io) this.io.disconnect();
     if (this.mo) this.mo.disconnect();
