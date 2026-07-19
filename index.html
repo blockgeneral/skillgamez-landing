@@ -811,7 +811,7 @@ document.getElementById('qdClose').addEventListener('click',function(){
    multi-touch prompts (mouse-friendly). */
 (function(){
 'use strict';
-var ZCOLORS=['#00f0ff','#ff2bd6','#ffd60a','#66ff66','#ff9d00','#b388ff'];
+var ZCOLORS=['#00f0ff','#ff2bd6','#ffd60a','#66ff66','#ff9d00','#b388ff','#ff5470','#4dffc3','#e8f4ff'];
 var DIFF={
   easy:  {label:'EASY',  lo:700, hi:800, acc:0.80},
   medium:{label:'MEDIUM',lo:500, hi:699, acc:0.88},
@@ -819,7 +819,7 @@ var DIFF={
   ultra: {label:'ULTRA', lo:250, hi:299, acc:0.98}
 };
 var WAGERS=[50,100,250];
-var SEQ_LEN=[4,6,8], ZONE_N=[4,6,6], ROUNDS=3;
+var SEQ_LEN=[4,6,8], ZONE_N=[9,9,9], ROUNDS=3;
 var FLASH=400, GAP=200, INPUT_CAP=15000;
 
 var overlay=document.getElementById('simOverlay');
@@ -860,8 +860,7 @@ function simAI(len){
     t+=rnd(d.lo,d.hi);
     events.push(t);
   }
-  var score=(correct/len)*100-t/100;
-  return {score:Math.round(score*10)/10,wall:t,events:events,correct:correct};
+  return {wall:Math.round(t),events:events,correct:correct};
 }
 
 /* ================= screens ================= */
@@ -901,7 +900,8 @@ function showSetup(){
 
 function startMatch(){
   G.bal-=G.wager;fmtBal();
-  G.round=0;G.youWins=0;G.aiWins=0;G.youTotalScore=0;G.aiTotalScore=0;
+  G.round=0;G.youWins=0;G.aiWins=0;
+  G.youTotCorrect=0;G.aiTotCorrect=0;G.youTotMs=0;G.aiTotMs=0;
   startRound();
 }
 
@@ -959,7 +959,7 @@ function setWatch(txt,color){
 
 function buildZones(){
   var n=G.cfg.zones, w=G.arena.clientWidth, h=G.arena.clientHeight-40;
-  var cols=n===4?2:(w>h?3:2), rows=Math.ceil(n/cols), gap=16;
+  var cols=3, rows=Math.ceil(n/cols), gap=14;
   var size=Math.min((w-gap*(cols+1))/cols,(h-gap*(rows+1))/rows,190);
   var gw=cols*size+(cols-1)*gap, gh=rows*size+(rows-1)*gap;
   var ox=(w-gw)/2, oy=40+(h-gh)/2;
@@ -1047,39 +1047,45 @@ function finishInput(){
   if(G.phase!=='input')return;
   G.phase='waitai';
   clearTimeout(G.capTimer);
-  var ms=performance.now()-G.goAt;
-  G.youScore=Math.round(((G.correct/G.cfg.seq.length)*100-ms/100)*10)/10;
+  G.youMs=Math.round(performance.now()-G.goAt);
   var elapsed=performance.now()-G.goAt;
   var wait=Math.max(0,G.ai.wall-elapsed)+300;
   setWatch('RIVAL FINISHING…','#ff2bd6');
   later(endRound,wait);
 }
 
+/* winner: more correct taps; tie on correct -> faster time; both equal -> draw */
 function endRound(){
   G.phase='done';
-  var you=G.youScore, ai=G.ai.score;
-  G.youTotalScore+=you;G.aiTotalScore+=ai;
-  var win=you>ai, tie=you===ai;
+  var len=G.cfg.seq.length;
+  var yc=G.correct, ym=G.youMs, ac=G.ai.correct, am=G.ai.wall;
+  G.youTotCorrect+=yc;G.aiTotCorrect+=ac;G.youTotMs+=ym;G.aiTotMs+=am;
+  var win,tie=false;
+  if(yc!==ac)win=yc>ac;
+  else if(ym!==am)win=ym<am;
+  else{win=false;tie=true;}
   if(win)G.youWins++;else if(!tie)G.aiWins++;
   var vcol=tie?'#ffd60a':win?'#00f0ff':'#ff2bd6';
   var verdict=tie?'DEAD HEAT':win?'ROUND YOURS':'RIVAL TAKES IT';
+  var why=yc!==ac?'More correct taps win.':'Same correct taps — faster time wins.';
   body.innerHTML='<div class="qd-screen">'
     +'<p class="qd-lbl">ROUND '+G.round+' / '+ROUNDS+'</p>'
     +'<div class="qd-res-row">'
-    +'<div><div class="qd-res-num" style="color:#00f0ff;">'+you.toFixed(1)+'</div><p class="qd-lbl">YOU</p></div>'
+    +'<div><div class="qd-res-num" style="color:#00f0ff;">'+yc+'/'+len+'</div><p class="qd-lbl">YOU · '+(ym/1000).toFixed(2)+'s</p></div>'
     +'<div class="qd-vs-sm">VS</div>'
-    +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+ai.toFixed(1)+'</div><p class="qd-lbl">RIVAL</p></div>'
+    +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+ac+'/'+len+'</div><p class="qd-lbl">RIVAL · '+(am/1000).toFixed(2)+'s</p></div>'
     +'</div>'
     +'<h2 class="qd-h" style="color:'+vcol+';text-shadow:0 0 24px '+vcol+';font-size:clamp(20px,5vw,32px);">'+verdict+'</h2>'
-    +'<p class="qd-sub">Rounds — you '+G.youWins+' · rival '+G.aiWins+'</p>'
+    +'<p class="qd-sub">'+why+' Rounds — you '+G.youWins+' · rival '+G.aiWins+'</p>'
     +'</div>';
-  later(G.round<ROUNDS?startRound:endMatch,1800);
+  later(G.round<ROUNDS?startRound:endMatch,2000);
 }
 
 function endMatch(){
   var win,tie=false;
   if(G.youWins!==G.aiWins)win=G.youWins>G.aiWins;
-  else if(G.youTotalScore!==G.aiTotalScore)win=G.youTotalScore>G.aiTotalScore;
+  else if(G.youTotCorrect!==G.aiTotCorrect)win=G.youTotCorrect>G.aiTotCorrect;
+  else if(G.youTotMs!==G.aiTotMs)win=G.youTotMs<G.aiTotMs;
   else{win=false;tie=true;}
   var pot=G.wager*2;
   if(win)G.bal+=pot;else if(tie)G.bal+=G.wager;
