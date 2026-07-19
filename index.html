@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillGamez — 1v1 Skill Duels on Telegram. Winner Takes All.</title>
+<meta name="description" content="SkillGamez: 1v1 skill duels on Telegram, built on TON. No RNG, no house edge — winner takes all. Work in progress.">
+<meta property="og:title" content="SkillGamez — 1v1 Skill Duels on Telegram">
+<meta property="og:description" content="Tap shapes. Swipe arrows. Read your opponent. Winner takes all. Built on TON.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#05071c;}
@@ -17,6 +17,8 @@ a{color:#00f0ff;text-decoration:none;}
 a:hover{color:#ffd60a;}
 *{box-sizing:border-box;}
 ::selection{background:#ff2bd6;color:#05071c;}
+body{min-height:100vh;background:#05071c;color:#eafaff;font-family:'Space Grotesk',sans-serif;overflow-x:hidden;position:relative;}
+
 @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @keyframes floatA{0%,100%{transform:translateY(0) rotate(8deg)}50%{transform:translateY(-22px) rotate(-4deg)}}
 @keyframes floatB{0%,100%{transform:translateY(-10px) rotate(-12deg)}50%{transform:translateY(14px) rotate(6deg)}}
@@ -25,373 +27,751 @@ a:hover{color:#ffd60a;}
 @keyframes blinker{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes wiggle{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
 @keyframes goflash{0%,100%{background:#ffd60a}50%{background:#fff27a}}
-@keyframes borderrun{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(10px,-14px)}}
+
+.grid-bg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);background-size:44px 44px;z-index:0;}
+.scanlines{position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;}
+.noise{position:fixed;inset:0;pointer-events:none;z-index:51;opacity:.05;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22/></svg>');}
+
+/* hero */
+header{position:relative;z-index:1;padding:clamp(28px,6vw,72px) clamp(18px,5vw,64px) clamp(36px,5vw,64px);min-height:92svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:clamp(18px,3vw,30px);}
+.shapes{position:absolute;inset:0;pointer-events:none;transition:transform .25s ease-out;}
+.wip-badge{display:inline-flex;align-items:center;gap:10px;background:#ffd60a;color:#05071c;font-weight:700;font-size:13px;letter-spacing:.14em;padding:7px 16px;transform:rotate(-3deg);box-shadow:4px 4px 0 #ff2bd6;}
+.wip-badge .dot{width:9px;height:9px;border-radius:50%;background:#05071c;animation:blinker 1.1s infinite;}
+h1{margin:0;font-family:'Bungee';font-weight:400;font-size:clamp(59px,14.6vw,176px);line-height:.95;letter-spacing:.01em;color:#eafaff;text-shadow:0 0 26px rgba(0,240,255,.5),5px 5px 0 #ff2bd6,10px 10px 0 rgba(0,240,255,.35);transform:rotate(-1.5deg);}
+.tagline{margin:0;font-size:clamp(23px,3.5vw,32px);font-weight:500;color:#bfe9ff;max-width:745px;}
+.vs-row{display:flex;align-items:center;gap:clamp(10px,3vw,26px);margin-top:6px;}
+.vs-you{font-family:'Bungee';font-size:clamp(20px,4vw,36px);color:#00f0ff;border:3px solid #00f0ff;padding:8px 18px;transform:rotate(-5deg) translateY(4px);box-shadow:0 0 22px rgba(0,240,255,.55),inset 0 0 14px rgba(0,240,255,.25);background:rgba(0,240,255,.06);}
+.vs-mid{font-family:'Bungee';font-size:clamp(38px,7vw,72px);color:#ffd60a;animation:vspulse 1.6s ease-in-out infinite;}
+.vs-rival{font-family:'Bungee';font-size:clamp(20px,4vw,36px);color:#ff2bd6;border:3px solid #ff2bd6;padding:8px 18px;transform:rotate(5deg) translateY(4px);box-shadow:0 0 22px rgba(255,43,214,.55),inset 0 0 14px rgba(255,43,214,.25);background:rgba(255,43,214,.06);}
+.stats{display:flex;gap:clamp(14px,4vw,40px);flex-wrap:wrap;justify-content:center;margin-top:4px;font-family:'Bungee';}
+.stat-num{font-size:clamp(24px,4vw,38px);}
+.stat-lbl{font-size:11px;letter-spacing:.2em;color:#7fa8c9;font-family:'Space Grotesk';}
+
+/* reaction toy */
+.toy-wrap{margin-top:clamp(10px,2vw,22px);width:min(440px,92vw);transform:rotate(1deg);position:relative;z-index:2;}
+.toy-kicker{font-size:11px;letter-spacing:.24em;color:#7fa8c9;margin-bottom:8px;font-weight:700;}
+#toy{cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+.toy-idle{border:3px dashed #00f0ff;background:rgba(0,240,255,.07);padding:26px 16px;font-family:'Bungee';font-size:20px;color:#00f0ff;box-shadow:0 0 24px rgba(0,240,255,.35);transition:background .2s,transform .2s;}
+.toy-idle:hover{background:rgba(0,240,255,.15);transform:scale(1.02);}
+.toy-wait{border:3px solid #ff2bd6;background:rgba(255,43,214,.1);padding:26px 16px;font-family:'Bungee';font-size:20px;color:#ff2bd6;}
+.toy-go{border:3px solid #ffd60a;padding:26px 16px;font-family:'Bungee';font-size:24px;color:#05071c;animation:goflash .3s infinite;box-shadow:0 0 44px rgba(255,214,10,.9);}
+.toy-early{border:3px solid #ff2bd6;background:#ff2bd6;padding:26px 16px;font-family:'Bungee';font-size:20px;color:#05071c;}
+.toy-result{border:3px solid #00f0ff;background:rgba(0,240,255,.08);padding:20px 16px;box-shadow:0 0 24px rgba(0,240,255,.4);}
+.toy-ms{font-family:'Bungee';font-size:38px;color:#ffd60a;text-shadow:0 0 18px rgba(255,214,10,.8);}
+.toy-verdict{font-family:'Bungee';font-size:15px;color:#00f0ff;margin-top:4px;}
+.toy-sub{font-size:12px;color:#7fa8c9;margin-top:6px;}
+
+/* marquee */
+.marquee{position:relative;z-index:2;background:#ffd60a;transform:rotate(-1.2deg) scale(1.02);border-top:3px solid #05071c;border-bottom:3px solid #05071c;overflow:hidden;box-shadow:0 0 30px rgba(255,214,10,.45);}
+.marquee-track{display:flex;width:max-content;animation:mq 18s linear infinite;}
+.marquee-seg{display:flex;gap:34px;padding:12px 17px;font-family:'Bungee';font-size:clamp(15px,2.2vw,21px);color:#05071c;white-space:nowrap;}
+
+/* sections */
+section{position:relative;z-index:1;}
+.how{padding:clamp(56px,9vw,110px) clamp(18px,5vw,64px);max-width:1200px;margin:0 auto;}
+h2{margin:0 0 clamp(28px,4vw,44px);font-family:'Bungee';font-weight:400;color:#eafaff;}
+.h2-how{font-size:clamp(28px,5vw,52px);transform:rotate(-1deg);text-shadow:3px 3px 0 #ff2bd6;}
+.h2-games{font-size:clamp(34px,6vw,64px);transform:rotate(1deg);text-shadow:4px 4px 0 #00f0ff;}
+.h2-fair{font-size:clamp(26px,4.5vw,44px);transform:rotate(-1deg);text-shadow:3px 3px 0 #ffd60a;}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
+.step{--c:#00f0ff;--cr:0,240,255;border:2px solid rgba(var(--cr),.5);background:rgba(var(--cr),.05);padding:22px 18px;transition:box-shadow .25s,transform .25s;}
+.step:hover{box-shadow:0 0 26px rgba(var(--cr),.4);transform:rotate(0deg) translateY(-4px)!important;}
+.step .num{font-family:'Bungee';font-size:34px;color:var(--c);text-shadow:0 0 12px rgba(var(--cr),.8);}
+.step .name{font-family:'Bungee';font-size:17px;margin-top:8px;}
+.step .sub{font-size:13px;color:#7fa8c9;margin-top:6px;}
+
+.games{padding:0 clamp(18px,5vw,64px) clamp(56px,9vw,110px);max-width:1240px;margin:0 auto;}
+.game-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:clamp(18px,3vw,30px);}
+.game{--c:#ffd60a;--cr:255,214,10;position:relative;border:3px solid var(--c);background:linear-gradient(160deg,#0a0e2e,#05071c);transition:transform .25s,box-shadow .25s;}
+.game:hover{transform:rotate(0deg) scale(1.025) translateY(-6px)!important;box-shadow:0 0 40px rgba(var(--cr),.5);}
+.game-badge{position:absolute;top:-14px;right:14px;z-index:3;font-family:'Bungee';font-size:11px;padding:5px 12px;color:#05071c;animation:wiggle 3s ease-in-out infinite;}
+.game-art{aspect-ratio:16/9;position:relative;border-bottom:3px solid var(--c);overflow:hidden;}
+.game-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.game-body{padding:20px 20px 24px;}
+.game-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.game h3{margin:0;font-family:'Bungee';font-weight:400;font-size:24px;color:var(--c);text-shadow:0 0 14px rgba(var(--cr),.5);}
+.game-time{font-family:'Bungee';font-size:12px;color:#7fa8c9;}
+.game p{margin:10px 0 0;font-size:15px;color:#bfe9ff;}
+
+.fair{padding:0 clamp(18px,5vw,64px) clamp(64px,10vw,120px);max-width:1000px;margin:0 auto;text-align:center;}
+.stickers{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;}
+.sticker{font-family:'Bungee';font-size:clamp(14px,2vw,18px);color:#05071c;padding:10px 20px;transition:transform .2s;}
+.sticker:hover{transform:rotate(0deg) scale(1.06)!important;}
+.sticker-outline{background:none!important;border:3px solid #00f0ff;color:#00f0ff!important;padding:8px 18px;box-shadow:0 0 18px rgba(0,240,255,.4)!important;}
+.cta{display:inline-block;font-family:'Bungee';font-size:clamp(18px,3vw,26px);color:#05071c;background:#00f0ff;padding:18px 40px;transform:rotate(-2deg);box-shadow:6px 6px 0 #ff2bd6,0 0 34px rgba(0,240,255,.55);transition:transform .2s,box-shadow .2s;cursor:default;user-select:none;}
+.cta:hover{transform:rotate(0deg) scale(1.05);box-shadow:6px 6px 0 #ff2bd6,0 0 54px rgba(0,240,255,.85);}
+.cta-note{margin-top:14px;font-size:12px;letter-spacing:.18em;color:#7fa8c9;}
+
+footer{position:relative;z-index:1;border-top:2px solid rgba(0,240,255,.25);padding:26px clamp(18px,5vw,64px);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;font-size:13px;color:#7fa8c9;}
+.foot-dot{width:8px;height:8px;border-radius:50%;background:#ffd60a;animation:blinker 1.4s infinite;display:inline-block;}
+
+.reveal{opacity:0;translate:0 24px;transition:opacity .6s,translate .6s;}
+.reveal.on{opacity:1;translate:none;}
+
+/* ===== Quick Draw demo ===== */
+.try-btn{display:inline-block;margin-top:14px;font-family:'Bungee';font-size:15px;color:#05071c;background:#ffd60a;padding:10px 22px;transform:rotate(-1.5deg);box-shadow:4px 4px 0 #ff2bd6;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .15s,box-shadow .15s;border:none;}
+.try-btn:hover{transform:rotate(0deg) scale(1.05);box-shadow:4px 4px 0 #ff2bd6,0 0 24px rgba(255,214,10,.6);}
+.qd-overlay{position:fixed;inset:0;z-index:100;background:#05071c;display:none;flex-direction:column;font-family:'Space Grotesk',sans-serif;}
+.qd-overlay.open{display:flex;}
+.qd-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);background-size:44px 44px;}
+.qd-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:2px solid rgba(0,240,255,.25);}
+.qd-demo-tag{font-family:'Bungee';font-size:11px;background:#ffd60a;color:#05071c;padding:4px 10px;transform:rotate(-2deg);box-shadow:3px 3px 0 #ff2bd6;}
+.qd-close{font-family:'Bungee';font-size:14px;color:#ff2bd6;border:2px solid #ff2bd6;background:none;padding:6px 14px;cursor:pointer;}
+.qd-close:hover{background:rgba(255,43,214,.15);}
+.qd-screen{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;}
+.qd-h{font-family:'Bungee';font-weight:400;font-size:clamp(24px,6vw,40px);color:#eafaff;text-shadow:3px 3px 0 #ff2bd6;margin:0;}
+.qd-sub{font-size:14px;color:#7fa8c9;max-width:420px;margin:0;}
+.qd-lbl{font-family:'Bungee';font-size:13px;color:#7fa8c9;letter-spacing:.18em;margin:8px 0 0;}
+.qd-opts{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.qd-opt{font-family:'Bungee';font-size:15px;color:#00f0ff;border:3px solid #00f0ff;background:rgba(0,240,255,.06);padding:12px 20px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .15s;}
+.qd-opt:hover{background:rgba(0,240,255,.15);}
+.qd-opt.sel{background:#00f0ff;color:#05071c;box-shadow:0 0 24px rgba(0,240,255,.6);}
+.qd-opt small{display:block;font-family:'Space Grotesk';font-size:11px;font-weight:500;margin-top:3px;opacity:.75;}
+.qd-balance{font-family:'Bungee';font-size:16px;color:#ffd60a;text-shadow:0 0 12px rgba(255,214,10,.6);}
+.qd-start{font-family:'Bungee';font-size:20px;color:#05071c;background:#ffd60a;border:none;padding:16px 40px;cursor:pointer;transform:rotate(-1.5deg);box-shadow:5px 5px 0 #ff2bd6;transition:transform .15s;}
+.qd-start:hover{transform:rotate(0deg) scale(1.05);}
+.qd-start:disabled{opacity:.4;cursor:default;}
+.qd-hud{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;font-family:'Bungee';font-size:13px;border-bottom:2px solid rgba(0,240,255,.2);}
+.qd-hud .you{color:#00f0ff;}.qd-hud .rival{color:#ff2bd6;text-align:right;}
+.qd-hud .round{color:#ffd60a;font-size:12px;}
+.qd-hud small{display:block;font-family:'Space Grotesk';font-size:10px;color:#7fa8c9;letter-spacing:.1em;}
+.qd-arena{position:relative;flex:1;touch-action:none;overflow:hidden;cursor:crosshair;}
+.qd-target{position:absolute;filter:drop-shadow(0 0 14px currentColor);}
+.qd-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;font-family:'Bungee';}
+.qd-count{font-size:clamp(60px,18vw,120px);color:#ffd60a;text-shadow:0 0 40px rgba(255,214,10,.8);}
+.qd-flash{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-family:'Bungee';font-size:15px;pointer-events:none;white-space:nowrap;}
+.qd-res-num{font-family:'Bungee';font-size:clamp(30px,8vw,52px);}
+.qd-res-row{display:flex;gap:clamp(18px,6vw,50px);align-items:baseline;justify-content:center;}
+.qd-vs-sm{font-family:'Bungee';color:#ffd60a;font-size:18px;}
+.qd-pips{display:flex;gap:5px;justify-content:center;margin-top:5px;}
+.qd-pip{width:9px;height:9px;border:1px solid rgba(255,214,10,.5);background:none;transform:rotate(45deg);transition:all .15s;}
+.qd-pip.on{background:#00f0ff;border-color:#00f0ff;box-shadow:0 0 8px #00f0ff;}
+@keyframes qdshake{0%,100%{translate:0 0}25%{translate:-7px 0}75%{translate:7px 0}}
+.qd-shake{animation:qdshake .22s;}
+.qd-arena.deny{box-shadow:inset 0 0 80px rgba(255,43,214,.4);transition:box-shadow .1s;}
 </style>
-</helmet>
-<div style="min-height:100vh;background:#05071c;color:#eafaff;font-family:'Space Grotesk',sans-serif;overflow:hidden;position:relative;">
-  <!-- bg grid -->
-  <div style="position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);background-size:44px 44px;z-index:0;"></div>
-  <sc-if value="{{ showScanlines }}" hint-placeholder-val="{{ true }}">
-    <div style="position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;"></div>
-  </sc-if>
-  <div style="position:fixed;inset:0;pointer-events:none;z-index:51;opacity:.05;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22/></svg>');"></div>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanlines"></div>
+<div class="noise"></div>
 
-  <!-- ============ HERO ============ -->
-  <header style="position:relative;z-index:1;padding:clamp(28px,6vw,72px) clamp(18px,5vw,64px) clamp(36px,5vw,64px);min-height:92svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:clamp(18px,3vw,30px);">
-    <!-- floating shapes (cursor parallax) -->
-    <div ref="{{ shapesRef }}" style="position:absolute;inset:0;pointer-events:none;transition:transform .25s ease-out;">
-      <div style="position:absolute;top:12%;left:8%;width:34px;height:34px;border:3px solid #00f0ff;box-shadow:0 0 18px rgba(0,240,255,.7);animation:floatA 6s ease-in-out infinite;"></div>
-      <div style="position:absolute;top:22%;right:10%;width:38px;height:38px;border:3px solid #ff2bd6;border-radius:50%;box-shadow:0 0 18px rgba(255,43,214,.7);animation:floatB 7s ease-in-out infinite;"></div>
-      <div style="position:absolute;bottom:24%;left:14%;width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:34px solid #ffd60a;filter:drop-shadow(0 0 12px rgba(255,214,10,.8));animation:floatC 5.5s ease-in-out infinite;"></div>
-      <div style="position:absolute;bottom:16%;right:16%;width:30px;height:30px;background:#ff2bd6;transform:rotate(45deg);box-shadow:0 0 18px rgba(255,43,214,.6);animation:floatA 8s ease-in-out infinite;"></div>
-      <div style="position:absolute;top:48%;left:4%;font-family:'Bungee';font-size:30px;color:#00f0ff;text-shadow:0 0 14px #00f0ff;animation:floatB 6.5s ease-in-out infinite;">→</div>
-      <div style="position:absolute;top:40%;right:5%;font-family:'Bungee';font-size:30px;color:#ffd60a;text-shadow:0 0 14px #ffd60a;animation:floatC 7.5s ease-in-out infinite;">↑</div>
-      <div style="position:absolute;top:8%;right:34%;width:16px;height:16px;border:2px solid #ffd60a;border-radius:50%;animation:drift 9s ease-in-out infinite;"></div>
-      <div style="position:absolute;bottom:10%;left:38%;width:18px;height:18px;border:2px solid #00f0ff;transform:rotate(20deg);animation:drift 8s ease-in-out infinite reverse;"></div>
+<!-- ============ HERO ============ -->
+<header>
+  <div class="shapes" id="shapes">
+    <div style="position:absolute;top:12%;left:8%;width:34px;height:34px;border:3px solid #00f0ff;box-shadow:0 0 18px rgba(0,240,255,.7);animation:floatA 6s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:22%;right:10%;width:38px;height:38px;border:3px solid #ff2bd6;border-radius:50%;box-shadow:0 0 18px rgba(255,43,214,.7);animation:floatB 7s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:24%;left:14%;width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:34px solid #ffd60a;filter:drop-shadow(0 0 12px rgba(255,214,10,.8));animation:floatC 5.5s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:16%;right:16%;width:30px;height:30px;background:#ff2bd6;transform:rotate(45deg);box-shadow:0 0 18px rgba(255,43,214,.6);animation:floatA 8s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:48%;left:4%;font-family:'Bungee';font-size:30px;color:#00f0ff;text-shadow:0 0 14px #00f0ff;animation:floatB 6.5s ease-in-out infinite;">→</div>
+    <div style="position:absolute;top:40%;right:5%;font-family:'Bungee';font-size:30px;color:#ffd60a;text-shadow:0 0 14px #ffd60a;animation:floatC 7.5s ease-in-out infinite;">↑</div>
+    <div style="position:absolute;top:8%;right:34%;width:16px;height:16px;border:2px solid #ffd60a;border-radius:50%;animation:drift 9s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:10%;left:38%;width:18px;height:18px;border:2px solid #00f0ff;transform:rotate(20deg);animation:drift 8s ease-in-out infinite reverse;"></div>
+  </div>
+
+  <canvas id="stick" style="position:absolute;left:0;bottom:0;width:100%;height:150px;pointer-events:none;opacity:.8;z-index:0;"></canvas>
+
+  <div class="wip-badge"><span class="dot"></span>WORK IN PROGRESS</div>
+
+  <h1>SKILL<span style="color:#00f0ff;">GAMEZ</span></h1>
+
+  <p class="tagline">1v1 skill duels on Telegram. <strong style="color:#ffd60a;">Winner takes all.</strong></p>
+
+  <div class="vs-row">
+    <div class="vs-you">YOU</div>
+    <div class="vs-mid">VS</div>
+    <div class="vs-rival">RIVAL</div>
+  </div>
+
+  <div class="stats">
+    <div style="text-align:center;"><div class="stat-num" style="color:#00f0ff;text-shadow:0 0 14px rgba(0,240,255,.7);"><span id="statDuel">0</span>s</div><div class="stat-lbl">MAX DUEL</div></div>
+    <div style="text-align:center;"><div class="stat-num" style="color:#ff2bd6;text-shadow:0 0 14px rgba(255,43,214,.7);"><span id="statFee">0</span>%</div><div class="stat-lbl">FLAT FEE</div></div>
+    <div style="text-align:center;"><div class="stat-num" style="color:#ffd60a;text-shadow:0 0 14px rgba(255,214,10,.7);"><span id="statRng">99</span></div><div class="stat-lbl">RNG. ZERO.</div></div>
+  </div>
+
+  <div class="toy-wrap">
+    <div class="toy-kicker">⚡ REACTION CHECK — THE WHOLE PITCH IN 3 SECONDS</div>
+    <div id="toy" class="toy-idle">TAP TO START</div>
+  </div>
+</header>
+
+<!-- ============ MARQUEE ============ -->
+<div class="marquee">
+  <div class="marquee-track" id="mqTrack">
+    <div class="marquee-seg"><span>WINNER TAKES ALL</span><span>⚡</span><span>NO RNG</span><span>⚡</span><span>PURE SKILL</span><span>⚡</span><span>DUELS UNDER 90 SECONDS</span><span>⚡</span><span>BUILT ON TON</span><span>⚡</span></div>
+    <div class="marquee-seg"><span>WINNER TAKES ALL</span><span>⚡</span><span>NO RNG</span><span>⚡</span><span>PURE SKILL</span><span>⚡</span><span>DUELS UNDER 90 SECONDS</span><span>⚡</span><span>BUILT ON TON</span><span>⚡</span></div>
+  </div>
+</div>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how">
+  <h2 class="h2-how reveal">HOW IT <span style="color:#00f0ff;">WORKS</span></h2>
+  <div class="steps">
+    <div class="step reveal" style="--c:#00f0ff;--cr:0,240,255;transform:rotate(-1deg);">
+      <div class="num">01</div>
+      <div class="name">BUY COINS WITH TON</div>
+      <div class="sub">Cash out anytime — flat 5% on the way out.</div>
     </div>
-
-    <canvas ref="{{ stickCanvasRef }}" style="position:absolute;left:0;bottom:0;width:100%;height:150px;pointer-events:none;opacity:.8;z-index:0;"></canvas>
-
-    <div style="display:inline-flex;align-items:center;gap:10px;background:#ffd60a;color:#05071c;font-weight:700;font-size:13px;letter-spacing:.14em;padding:7px 16px;transform:rotate(-3deg);box-shadow:4px 4px 0 #ff2bd6;">
-      <span style="width:9px;height:9px;border-radius:50%;background:#05071c;animation:blinker 1.1s infinite;"></span>
-      WORK IN PROGRESS
+    <div class="step reveal" style="--c:#ff2bd6;--cr:255,43,214;transform:rotate(1deg);transition-delay:.07s;">
+      <div class="num">02</div>
+      <div class="name">MATCH IN SECONDS</div>
+      <div class="sub">Same stake, same game.</div>
     </div>
-
-    <h1 style="margin:0;font-family:'Bungee';font-weight:400;font-size:clamp(44px,11vw,132px);line-height:.95;letter-spacing:.01em;color:#eafaff;text-shadow:0 0 26px rgba(0,240,255,.5), 5px 5px 0 #ff2bd6, 10px 10px 0 rgba(0,240,255,.35);transform:rotate(-1.5deg);">SKILL<span style="color:#00f0ff;">GAMEZ</span></h1>
-
-    <p style="margin:0;font-size:clamp(17px,2.6vw,24px);font-weight:500;color:#bfe9ff;max-width:560px;">1v1 skill duels on Telegram. <strong style="color:#ffd60a;">Winner takes all.</strong></p>
-
-    <!-- VS clash -->
-    <div style="display:flex;align-items:center;gap:clamp(10px,3vw,26px);margin-top:6px;">
-      <div style="font-family:'Bungee';font-size:clamp(20px,4vw,36px);color:#00f0ff;border:3px solid #00f0ff;padding:8px 18px;transform:rotate(-5deg) translateY(4px);box-shadow:0 0 22px rgba(0,240,255,.55),inset 0 0 14px rgba(0,240,255,.25);background:rgba(0,240,255,.06);">YOU</div>
-      <div style="font-family:'Bungee';font-size:clamp(38px,7vw,72px);color:#ffd60a;animation:vspulse 1.6s ease-in-out infinite;">VS</div>
-      <div style="font-family:'Bungee';font-size:clamp(20px,4vw,36px);color:#ff2bd6;border:3px solid #ff2bd6;padding:8px 18px;transform:rotate(5deg) translateY(4px);box-shadow:0 0 22px rgba(255,43,214,.55),inset 0 0 14px rgba(255,43,214,.25);background:rgba(255,43,214,.06);">RIVAL</div>
+    <div class="step reveal" style="--c:#ffd60a;--cr:255,214,10;transform:rotate(-1deg);transition-delay:.14s;">
+      <div class="num">03</div>
+      <div class="name">DUEL 60 SECONDS</div>
+      <div class="sub">Live PVP battles. Head to head.</div>
     </div>
-
-    <!-- count-up stats -->
-    <div style="display:flex;gap:clamp(14px,4vw,40px);flex-wrap:wrap;justify-content:center;margin-top:4px;font-family:'Bungee';">
-      <div style="text-align:center;"><div style="font-size:clamp(24px,4vw,38px);color:#00f0ff;text-shadow:0 0 14px rgba(0,240,255,.7);">{{ statDuel }}s</div><div style="font-size:11px;letter-spacing:.2em;color:#7fa8c9;font-family:'Space Grotesk';">MAX DUEL</div></div>
-      <div style="text-align:center;"><div style="font-size:clamp(24px,4vw,38px);color:#ff2bd6;text-shadow:0 0 14px rgba(255,43,214,.7);">{{ statFee }}%</div><div style="font-size:11px;letter-spacing:.2em;color:#7fa8c9;font-family:'Space Grotesk';">FLAT FEE</div></div>
-      <div style="text-align:center;"><div style="font-size:clamp(24px,4vw,38px);color:#ffd60a;text-shadow:0 0 14px rgba(255,214,10,.7);">{{ statRng }}</div><div style="font-size:11px;letter-spacing:.2em;color:#7fa8c9;font-family:'Space Grotesk';">RNG. ZERO.</div></div>
+    <div class="step reveal" style="--c:#00f0ff;--cr:0,240,255;transform:rotate(1deg);transition-delay:.21s;">
+      <div class="num">04</div>
+      <div class="name">WINNER TAKES THE POT</div>
+      <div class="sub">Both stakes. Instantly.</div>
     </div>
+  </div>
+</section>
 
-    <!-- reaction toy -->
-    <sc-if value="{{ showToy }}" hint-placeholder-val="{{ true }}">
-      <div style="margin-top:clamp(10px,2vw,22px);width:min(440px,92vw);transform:rotate(1deg);">
-        <div style="font-size:11px;letter-spacing:.24em;color:#7fa8c9;margin-bottom:8px;font-weight:700;">⚡ REACTION CHECK — THE WHOLE PITCH IN 3 SECONDS</div>
-        <sc-if value="{{ toyIdle }}" hint-placeholder-val="{{ true }}">
-          <div onClick="{{ toyClick }}" style="cursor:pointer;user-select:none;border:3px dashed #00f0ff;background:rgba(0,240,255,.07);padding:26px 16px;font-family:'Bungee';font-size:20px;color:#00f0ff;box-shadow:0 0 24px rgba(0,240,255,.35);" style-hover="background:rgba(0,240,255,.15);transform:scale(1.02);">TAP TO START</div>
-        </sc-if>
-        <sc-if value="{{ toyWait }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ toyClick }}" style="cursor:pointer;user-select:none;border:3px solid #ff2bd6;background:rgba(255,43,214,.1);padding:26px 16px;font-family:'Bungee';font-size:20px;color:#ff2bd6;">WAIT FOR IT…</div>
-        </sc-if>
-        <sc-if value="{{ toyGo }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ toyClick }}" style="cursor:pointer;user-select:none;border:3px solid #ffd60a;padding:26px 16px;font-family:'Bungee';font-size:24px;color:#05071c;animation:goflash .3s infinite;box-shadow:0 0 44px rgba(255,214,10,.9);">TAP NOW!</div>
-        </sc-if>
-        <sc-if value="{{ toyEarly }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ toyClick }}" style="cursor:pointer;user-select:none;border:3px solid #ff2bd6;background:#ff2bd6;padding:26px 16px;font-family:'Bungee';font-size:20px;color:#05071c;">TOO SOON! TAP TO RETRY</div>
-        </sc-if>
-        <sc-if value="{{ toyResult }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ toyClick }}" style="cursor:pointer;user-select:none;border:3px solid #00f0ff;background:rgba(0,240,255,.08);padding:20px 16px;box-shadow:0 0 24px rgba(0,240,255,.4);">
-            <div style="font-family:'Bungee';font-size:38px;color:#ffd60a;text-shadow:0 0 18px rgba(255,214,10,.8);">{{ toyMs }} ms</div>
-            <div style="font-family:'Bungee';font-size:15px;color:#00f0ff;margin-top:4px;">{{ toyVerdict }}</div>
-            <div style="font-size:12px;color:#7fa8c9;margin-top:6px;">best {{ toyBest }} ms · tap to go again</div>
-          </div>
-        </sc-if>
+<!-- ============ THE GAMES ============ -->
+<section class="games">
+  <h2 class="h2-games reveal">THE <span style="color:#ff2bd6;">GAMES</span></h2>
+  <div class="game-grid">
+
+    <div class="game reveal" style="--c:#ffd60a;--cr:255,214,10;transform:rotate(-1.2deg);">
+      <div class="game-badge" style="background:#ffd60a;transform:rotate(3deg);box-shadow:3px 3px 0 #ff2bd6;">IN DEVELOPMENT</div>
+      <div class="game-art"><img src="art/quick-draw.png" alt="Quick Draw game art — neon shapes and arrows"></div>
+      <div class="game-body">
+        <div class="game-title-row"><h3>QUICK DRAW</h3><span class="game-time">~90s</span></div>
+        <p>Tap shapes. Swipe arrows. Fastest fingers win.</p>
+        <button class="try-btn" id="qdTryBtn">▶ TRY IT VS AI</button>
       </div>
-    </sc-if>
-  </header>
+    </div>
 
-  <!-- ============ MARQUEE ============ -->
-  <div style="position:relative;z-index:2;background:#ffd60a;transform:rotate(-1.2deg) scale(1.02);border-top:3px solid #05071c;border-bottom:3px solid #05071c;overflow:hidden;box-shadow:0 0 30px rgba(255,214,10,.45);">
-    <div style="display:flex;width:max-content;animation:mq 18s linear infinite;">
-      <div style="display:flex;gap:34px;padding:12px 17px;font-family:'Bungee';font-size:clamp(15px,2.2vw,21px);color:#05071c;white-space:nowrap;">
-        <span>WINNER TAKES ALL</span><span>⚡</span><span>NO RNG</span><span>⚡</span><span>PURE SKILL</span><span>⚡</span><span>60-SECOND DUELS</span><span>⚡</span><span>BUILT ON TON</span><span>⚡</span>
+    <div class="game reveal" style="--c:#00f0ff;--cr:0,240,255;transform:rotate(1deg);transition-delay:.1s;">
+      <div class="game-badge" style="background:#00f0ff;transform:rotate(-3deg);box-shadow:3px 3px 0 #ffd60a;animation-duration:3.4s;">UP NEXT</div>
+      <div class="game-art"><img src="art/simon-showdown.png" alt="Simon Showdown game art — glowing pattern zones"></div>
+      <div class="game-body">
+        <div class="game-title-row"><h3>SIMON SHOWDOWN</h3><span class="game-time">~60s</span></div>
+        <p>Watch the pattern. Tap it back. Speed × memory.</p>
       </div>
-      <div style="display:flex;gap:34px;padding:12px 17px;font-family:'Bungee';font-size:clamp(15px,2.2vw,21px);color:#05071c;white-space:nowrap;">
-        <span>WINNER TAKES ALL</span><span>⚡</span><span>NO RNG</span><span>⚡</span><span>PURE SKILL</span><span>⚡</span><span>60-SECOND DUELS</span><span>⚡</span><span>BUILT ON TON</span><span>⚡</span>
+    </div>
+
+    <div class="game reveal" style="--c:#ff2bd6;--cr:255,43,214;transform:rotate(-1deg);transition-delay:.2s;">
+      <div class="game-badge" style="background:#ff2bd6;transform:rotate(3deg);box-shadow:3px 3px 0 #00f0ff;animation-duration:3.8s;">ROADMAP</div>
+      <div class="game-art"><img src="art/stickman-fight.png" alt="Stickman Fight game art — neon stickman duel"></div>
+      <div class="game-body">
+        <div class="game-title-row"><h3>STICKMAN FIGHT</h3><span class="game-time">~45s</span></div>
+        <p>Read your opponent. Strike first.</p>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- ============ HOW IT WORKS ============ -->
-  <section style="position:relative;z-index:1;padding:clamp(56px,9vw,110px) clamp(18px,5vw,64px);max-width:1200px;margin:0 auto;">
-    <h2 data-reveal="1" style="margin:0 0 clamp(28px,4vw,44px);font-family:'Bungee';font-weight:400;font-size:clamp(28px,5vw,52px);color:#eafaff;transform:rotate(-1deg);text-shadow:3px 3px 0 #ff2bd6;opacity:0;transition:opacity .6s,transform .6s;translate:0 24px;">HOW IT <span style="color:#00f0ff;">WORKS</span></h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;">
-      <div data-reveal="1" style="border:2px solid rgba(0,240,255,.5);background:rgba(0,240,255,.05);padding:22px 18px;transform:rotate(-1deg);opacity:0;transition:opacity .6s .05s,transform .6s .05s;" style-hover="box-shadow:0 0 26px rgba(0,240,255,.4);transform:rotate(0deg) translateY(-4px);">
-        <div style="font-family:'Bungee';font-size:34px;color:#00f0ff;text-shadow:0 0 12px rgba(0,240,255,.8);">01</div>
-        <div style="font-family:'Bungee';font-size:17px;margin-top:8px;">BUY COINS WITH TON</div>
-        <div style="font-size:13px;color:#7fa8c9;margin-top:6px;">Cash out anytime.</div>
-      </div>
-      <div data-reveal="1" style="border:2px solid rgba(255,43,214,.5);background:rgba(255,43,214,.05);padding:22px 18px;transform:rotate(1deg);opacity:0;transition:opacity .6s .12s,transform .6s .12s;" style-hover="box-shadow:0 0 26px rgba(255,43,214,.4);transform:rotate(0deg) translateY(-4px);">
-        <div style="font-family:'Bungee';font-size:34px;color:#ff2bd6;text-shadow:0 0 12px rgba(255,43,214,.8);">02</div>
-        <div style="font-family:'Bungee';font-size:17px;margin-top:8px;">MATCH IN SECONDS</div>
-        <div style="font-size:13px;color:#7fa8c9;margin-top:6px;">Same stake, same game.</div>
-      </div>
-      <div data-reveal="1" style="border:2px solid rgba(255,214,10,.5);background:rgba(255,214,10,.05);padding:22px 18px;transform:rotate(-1deg);opacity:0;transition:opacity .6s .19s,transform .6s .19s;" style-hover="box-shadow:0 0 26px rgba(255,214,10,.4);transform:rotate(0deg) translateY(-4px);">
-        <div style="font-family:'Bungee';font-size:34px;color:#ffd60a;text-shadow:0 0 12px rgba(255,214,10,.8);">03</div>
-        <div style="font-family:'Bungee';font-size:17px;margin-top:8px;">DUEL 60 SECONDS</div>
-        <div style="font-size:13px;color:#7fa8c9;margin-top:6px;">Live. Head to head.</div>
-      </div>
-      <div data-reveal="1" style="border:2px solid rgba(0,240,255,.5);background:rgba(0,240,255,.05);padding:22px 18px;transform:rotate(1deg);opacity:0;transition:opacity .6s .26s,transform .6s .26s;" style-hover="box-shadow:0 0 26px rgba(0,240,255,.4);transform:rotate(0deg) translateY(-4px);">
-        <div style="font-family:'Bungee';font-size:34px;color:#00f0ff;text-shadow:0 0 12px rgba(0,240,255,.8);">04</div>
-        <div style="font-family:'Bungee';font-size:17px;margin-top:8px;">WINNER TAKES THE POT</div>
-        <div style="font-size:13px;color:#7fa8c9;margin-top:6px;">Flat 10% fee. That's it.</div>
-      </div>
-    </div>
-  </section>
+<!-- ============ FAIR PLAY ============ -->
+<section class="fair">
+  <h2 class="h2-fair reveal">FAIR <span style="color:#ffd60a;">PLAY</span></h2>
+  <div class="stickers reveal">
+    <span class="sticker" style="background:#ff2bd6;transform:rotate(2deg);box-shadow:4px 4px 0 #ffd60a;">NO HOUSE EDGE</span>
+    <span class="sticker" style="background:#ffd60a;transform:rotate(-2deg);box-shadow:4px 4px 0 #00f0ff;">SERVER-VALIDATED</span>
+    <span class="sticker" style="background:#eafaff;transform:rotate(3deg);box-shadow:4px 4px 0 #ff2bd6;">120MS HUMANITY CHECK</span>
+    <span class="sticker sticker-outline" style="transform:rotate(-1deg);">CHEAT = BANNED. OPPONENT PAID.</span>
+  </div>
+  <div class="reveal" style="margin-top:clamp(36px,6vw,56px);transition-delay:.1s;">
+    <span class="cta">FOLLOW TO STAY TUNED →</span>
+    <div class="cta-note">TELEGRAM CHANNEL COMING SOON</div>
+  </div>
+</section>
 
-  <!-- ============ THE GAMES ============ -->
-  <section style="position:relative;z-index:1;padding:0 clamp(18px,5vw,64px) clamp(56px,9vw,110px);max-width:1240px;margin:0 auto;">
-    <h2 data-reveal="1" style="margin:0 0 clamp(28px,4vw,44px);font-family:'Bungee';font-weight:400;font-size:clamp(34px,6vw,64px);color:#eafaff;transform:rotate(1deg);text-shadow:4px 4px 0 #00f0ff;opacity:0;transition:opacity .6s,transform .6s;">THE <span style="color:#ff2bd6;">GAMES</span></h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:clamp(18px,3vw,30px);">
-
-      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #ffd60a;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1.2deg);transition:transform .25s,box-shadow .25s,opacity .6s;opacity:0;" style-hover="transform:rotate(var(--tw,1.6deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(255,214,10,.5);">
-        <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#ffd60a;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(3deg);animation:wiggle 3s ease-in-out infinite;box-shadow:3px 3px 0 #ff2bd6;">IN DEVELOPMENT</div>
-        <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #ffd60a;">
-          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-quickdraw" shape="rect" src="./art/quick-draw.png" placeholder="GAME ART — QUICK DRAW · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
-        </div>
-        <div style="padding:20px 20px 24px;">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <h3 style="margin:0;font-family:'Bungee';font-weight:400;font-size:24px;color:#ffd60a;text-shadow:0 0 14px rgba(255,214,10,.5);">QUICK DRAW</h3>
-            <span style="font-family:'Bungee';font-size:12px;color:#7fa8c9;">~90s</span>
-          </div>
-          <p style="margin:10px 0 0;font-size:15px;color:#bfe9ff;">Tap shapes. Swipe arrows. Fastest fingers win.</p>
-        </div>
-      </div>
-
-      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #00f0ff;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(1deg);transition:transform .25s,box-shadow .25s,opacity .6s .1s;opacity:0;" style-hover="transform:rotate(var(--tw,-1.6deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(0,240,255,.5);">
-        <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#00f0ff;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(-3deg);animation:wiggle 3.4s ease-in-out infinite;box-shadow:3px 3px 0 #ffd60a;">UP NEXT</div>
-        <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #00f0ff;">
-          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-simon" shape="rect" src="./art/simon-showdown.png" placeholder="GAME ART — SIMON SHOWDOWN · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
-        </div>
-        <div style="padding:20px 20px 24px;">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <h3 style="margin:0;font-family:'Bungee';font-weight:400;font-size:24px;color:#00f0ff;text-shadow:0 0 14px rgba(0,240,255,.5);">SIMON SHOWDOWN</h3>
-            <span style="font-family:'Bungee';font-size:12px;color:#7fa8c9;">~60s</span>
-          </div>
-          <p style="margin:10px 0 0;font-size:15px;color:#bfe9ff;">Watch the pattern. Tap it back. Speed × memory.</p>
-        </div>
-      </div>
-
-      <div data-reveal="1" data-twist="1" style="position:relative;border:3px solid #ff2bd6;background:linear-gradient(160deg,#0a0e2e,#05071c);transform:rotate(-1deg);transition:transform .25s,box-shadow .25s,opacity .6s .2s;opacity:0;" style-hover="transform:rotate(var(--tw,1.4deg)) scale(1.05) translateY(-6px);box-shadow:0 0 40px rgba(255,43,214,.5);">
-        <div style="position:absolute;top:-14px;right:14px;z-index:3;background:#ff2bd6;color:#05071c;font-family:'Bungee';font-size:11px;padding:5px 12px;transform:rotate(3deg);animation:wiggle 3.8s ease-in-out infinite;box-shadow:3px 3px 0 #00f0ff;">ROADMAP</div>
-        <div style="aspect-ratio:16/9;position:relative;border-bottom:3px solid #ff2bd6;">
-          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="art-stickman" shape="rect" src="./art/stickman-fight.png" placeholder="GAME ART — STICKMAN FIGHT · 16:9" hint-size="100%,100%" style="position:absolute;inset:0;"></x-import>
-        </div>
-        <div style="padding:20px 20px 24px;">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <h3 style="margin:0;font-family:'Bungee';font-weight:400;font-size:24px;color:#ff2bd6;text-shadow:0 0 14px rgba(255,43,214,.5);">STICKMAN FIGHT</h3>
-            <span style="font-family:'Bungee';font-size:12px;color:#7fa8c9;">~45s</span>
-          </div>
-          <p style="margin:10px 0 0;font-size:15px;color:#bfe9ff;">Read your opponent. Strike first.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ FAIR PLAY ============ -->
-  <section style="position:relative;z-index:1;padding:0 clamp(18px,5vw,64px) clamp(64px,10vw,120px);max-width:1000px;margin:0 auto;text-align:center;">
-    <h2 data-reveal="1" style="margin:0 0 clamp(24px,4vw,40px);font-family:'Bungee';font-weight:400;font-size:clamp(26px,4.5vw,44px);color:#eafaff;transform:rotate(-1deg);text-shadow:3px 3px 0 #ffd60a;opacity:0;transition:opacity .6s,transform .6s;">FAIR <span style="color:#ffd60a;">PLAY</span></h2>
-    <div data-reveal="1" style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;opacity:0;transition:opacity .6s .1s,transform .6s .1s;">
-      <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);background:#00f0ff;color:#05071c;padding:10px 20px;transform:rotate(-3deg);box-shadow:4px 4px 0 #ff2bd6;" style-hover="transform:rotate(0deg) scale(1.06);">NO RNG</span>
-      <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);background:#ff2bd6;color:#05071c;padding:10px 20px;transform:rotate(2deg);box-shadow:4px 4px 0 #ffd60a;" style-hover="transform:rotate(0deg) scale(1.06);">NO HOUSE EDGE</span>
-      <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);background:#ffd60a;color:#05071c;padding:10px 20px;transform:rotate(-2deg);box-shadow:4px 4px 0 #00f0ff;" style-hover="transform:rotate(0deg) scale(1.06);">SERVER-VALIDATED</span>
-      <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);background:#eafaff;color:#05071c;padding:10px 20px;transform:rotate(3deg);box-shadow:4px 4px 0 #ff2bd6;" style-hover="transform:rotate(0deg) scale(1.06);">120MS HUMANITY CHECK</span>
-      <span style="font-family:'Bungee';font-size:clamp(14px,2vw,18px);border:3px solid #00f0ff;color:#00f0ff;padding:8px 18px;transform:rotate(-1deg);box-shadow:0 0 18px rgba(0,240,255,.4);" style-hover="transform:rotate(0deg) scale(1.06);">CHEAT ONCE = BANNED FOREVER</span>
-    </div>
-    <div data-reveal="1" style="margin-top:clamp(36px,6vw,56px);opacity:0;transition:opacity .6s .15s,transform .6s .15s;">
-      <a href="#" data-twist="1" style="display:inline-block;font-family:'Bungee';font-size:clamp(18px,3vw,26px);color:#05071c;background:#00f0ff;padding:18px 40px;transform:rotate(-2deg);box-shadow:6px 6px 0 #ff2bd6,0 0 34px rgba(0,240,255,.55);transition:transform .2s,box-shadow .2s;" style-hover="transform:rotate(var(--tw,2deg)) scale(1.1);box-shadow:6px 6px 0 #ff2bd6,0 0 54px rgba(0,240,255,.85);color:#05071c;" style-active="transform:scale(.97);">FOLLOW TO STAY TUNED →</a>
-      <div style="margin-top:14px;font-size:12px;letter-spacing:.18em;color:#7fa8c9;">TELEGRAM CHANNEL COMING SOON</div>
-    </div>
-  </section>
-
-  <!-- ============ FOOTER ============ -->
-  <footer style="position:relative;z-index:1;border-top:2px solid rgba(0,240,255,.25);padding:26px clamp(18px,5vw,64px);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;font-size:13px;color:#7fa8c9;">
-    <span style="display:inline-flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:#ffd60a;animation:blinker 1.4s infinite;"></span>Early WIP — details may change.</span>
-    <span>© 2026 SkillGamez · Built on <span style="color:#00f0ff;font-weight:700;">TON</span></span>
-  </footer>
+<!-- ============ QUICK DRAW DEMO OVERLAY ============ -->
+<div class="qd-overlay" id="qdOverlay">
+  <div class="qd-grid"></div>
+  <div class="qd-top">
+    <span class="qd-demo-tag">DEMO · FAKE COINS · VS AI</span>
+    <span class="qd-balance" id="qdBalance"></span>
+    <button class="qd-close" id="qdClose">✕ EXIT</button>
+  </div>
+  <div id="qdBody" style="display:flex;flex-direction:column;flex:1;position:relative;"></div>
 </div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Effects&quot;},&quot;reactionToy&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Hero&quot;}}">
-class Component extends DCLogic {
-  state = { phase: 'idle', ms: null, best: null, stat: 0 };
-  componentDidMount() {
-    this.onMove = (e) => {
-      if (!this.shapesEl) return;
-      const x = (e.clientX / window.innerWidth - 0.5) * 34;
-      const y = (e.clientY / window.innerHeight - 0.5) * 34;
-      this.shapesEl.style.transform = `translate(${x}px,${y}px)`;
-    };
-    window.addEventListener('mousemove', this.onMove);
-    this.stickRaf = requestAnimationFrame(this.animStick);
-    // count-up stats
-    const t0 = performance.now();
-    const tick = (t) => {
-      const p = Math.min(1, (t - t0) / 1100);
-      this.setState({ stat: 1 - Math.pow(1 - p, 3) });
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    // scroll reveals (retry to catch late-streamed nodes)
-    this.io = new IntersectionObserver((es) => es.forEach((en) => {
-      if (en.isIntersecting) {
-        en.target.style.opacity = '1';
-        en.target.style.translate = 'none';
-        this.io.unobserve(en.target);
-      }
-    }), { threshold: 0.12 });
-    this.observeAll = () => document.querySelectorAll('[data-reveal]').forEach((el) => {
-      if (!el.__obs) { el.__obs = 1; el.style.translate = '0 24px'; this.io.observe(el); }
-    });
-    this.observeAll();
-    this.mo = new MutationObserver(() => this.observeAll());
-    this.mo.observe(document.body, { childList: true, subtree: true });
-    this.retries = [setTimeout(this.observeAll, 800), setTimeout(this.observeAll, 2500)];
-    // random twist on hover: each time the pointer enters a [data-twist] element,
-    // pick a fresh small rotation; style-hover reads it via var(--tw)
-    this.onTwist = (e) => {
-      const el = e.target && e.target.closest && e.target.closest('[data-twist]');
-      if (!el) return;
-      if (e.relatedTarget && el.contains(e.relatedTarget)) return; // moving within the element
-      const mag = 0.8 + Math.random() * 1.6;               // 0.8deg – 2.4deg
-      const sign = Math.random() < 0.5 ? -1 : 1;
-      el.style.setProperty('--tw', (sign * mag).toFixed(2) + 'deg');
-    };
-    document.addEventListener('pointerover', this.onTwist);
-  }
-  componentWillUnmount() {
-    document.removeEventListener('pointerover', this.onTwist);
-    window.removeEventListener('mousemove', this.onMove);
-    if (this.io) this.io.disconnect();
-    if (this.mo) this.mo.disconnect();
-    (this.retries || []).forEach(clearTimeout);
-    cancelAnimationFrame(this.stickRaf);
-    clearTimeout(this.toyTimer);
-  }
-  animStick = (now) => {
-    this.stickRaf = requestAnimationFrame(this.animStick);
-    const cv = this.stickEl;
-    if (!cv || !cv.offsetWidth) return;
-    const w = cv.offsetWidth, h = 150, dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = h * dpr; }
-    const ctx = cv.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const S = this.stick || (this.stick = {
-      mode: 'chase', until: 0, cx: w / 2,
-      a: { x: w * 0.1, y: 0, vy: 0, nj: now + 500 + Math.random() * 1500, ph: Math.random() * 6 },
-      b: { x: w * 0.9, y: 0, vy: 0, nj: now + 500 + Math.random() * 1500, ph: Math.random() * 6 }
-    });
-    const t = now / 1000, gy = h - 14, sp = Math.min(2.2, w / 500);
-    const A = S.a, B = S.b;
-    // jump physics (each fighter independent)
-    [A, B].forEach((F) => {
-      if (F.y < 0 || F.vy !== 0) {
-        F.vy += 0.34; F.y += F.vy;
-        if (F.y >= 0) { F.y = 0; F.vy = 0; F.nj = now + 1400 + Math.random() * 3200; }
-      }
-    });
-    const tryJump = (F, pow) => { if (F.y === 0 && F.vy === 0 && now > F.nj) { F.vy = -pow; F.y = -0.01; } };
-    if (S.mode === 'chase') {
-      A.x += sp; B.x -= sp;
-      tryJump(A, 6.4); tryJump(B, 6.4);
-      if (B.x - A.x < 76 && A.y === 0 && B.y === 0) {
-        S.mode = 'fight'; S.until = now + 2400 + Math.random() * 1400;
-        S.cx = Math.max(90, Math.min(w - 90, (A.x + B.x) / 2));
-      }
-    } else if (S.mode === 'fight') {
-      // footsie shuffle: each fighter steps in and out on its own rhythm
-      A.x = S.cx - 38 + Math.sin(t * 2.3 + A.ph) * 11 + Math.sin(t * 5.1 + A.ph) * 3;
-      B.x = S.cx + 38 - Math.sin(t * 2.7 + B.ph) * 11 - Math.sin(t * 4.3 + B.ph) * 3;
-      if (now > S.until) { S.mode = 'retreat'; S.until = now + 1200 + Math.random() * 900; }
-    } else {
-      A.x -= sp * 1.5; B.x += sp * 1.5;
-      tryJump(A, 5.6); tryJump(B, 5.6);
-      if (now > S.until || A.x < 30 || B.x > w - 30) S.mode = 'chase';
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <span style="display:inline-flex;align-items:center;gap:8px;"><span class="foot-dot"></span>Early WIP — details may change.</span>
+  <span>© 2026 SkillGamez · Built on <span style="color:#00f0ff;font-weight:700;">TON</span></span>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---- cursor parallax ---- */
+  var shapes=document.getElementById('shapes');
+  window.addEventListener('mousemove',function(e){
+    var x=(e.clientX/window.innerWidth-0.5)*34, y=(e.clientY/window.innerHeight-0.5)*34;
+    shapes.style.transform='translate('+x+'px,'+y+'px)';
+  });
+
+  /* ---- count-up stats ---- */
+  var t0=performance.now();
+  (function tick(t){
+    var p=Math.min(1,((t||performance.now())-t0)/1100), s=1-Math.pow(1-p,3);
+    document.getElementById('statDuel').textContent=Math.round(s*90);
+    document.getElementById('statFee').textContent=Math.round(s*5);
+    document.getElementById('statRng').textContent=(p>=1)?'0':Math.round((1-s)*99);
+    if(p<1)requestAnimationFrame(tick);
+  })();
+
+  /* ---- marquee: clone segments so each half always covers the viewport ---- */
+  (function(){
+    var track=document.getElementById('mqTrack');
+    var seg=track.children[0];
+    function fill(){
+      var w=seg.offsetWidth;
+      if(!w)return;
+      var perHalf=Math.max(1,Math.ceil((window.innerWidth*1.1)/w));
+      var need=perHalf*2;
+      while(track.children.length<need)track.appendChild(seg.cloneNode(true));
+      while(track.children.length>need&&track.children.length>2)track.removeChild(track.lastChild);
     }
-    A.x = Math.max(24, Math.min(w - 100, A.x));
-    B.x = Math.min(w - 24, Math.max(100, B.x));
-    const f = S.mode === 'fight', r = S.mode === 'retreat';
-    this.drawStick(ctx, A.x, gy + A.y, '#00f0ff', r ? -1 : 1, f, t, A.y < 0);
-    this.drawStick(ctx, B.x, gy + B.y, '#ff2bd6', r ? 1 : -1, f, t + 0.47, B.y < 0);
-    if (f && Math.sin(t * 13) > 0.8) this.drawSpark(ctx, (A.x + B.x) / 2, gy - 36);
-  };
-  drawStick(ctx, x, gy, c, face, fighting, t, air) {
-    const p = Math.sin(t * 11), bob = Math.abs(Math.cos(t * 11)) * 2.5;
-    const hy = gy - 24 - (fighting ? 2 : bob), sy = hy - 15;
-    ctx.strokeStyle = c; ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 9;
-    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.beginPath(); ctx.arc(x + face * 3, sy - 9, 5, 0, 7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + face * 2, sy - 4); ctx.lineTo(x, hy); ctx.stroke();
+    fill();
+    window.addEventListener('resize',fill);
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fill);
+  })();
+
+  /* ---- scroll reveals ---- */
+  var io=new IntersectionObserver(function(es){es.forEach(function(en){
+    if(en.isIntersecting){en.target.classList.add('on');io.unobserve(en.target);}
+  });},{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  /* ---- reaction toy ---- */
+  var toy=document.getElementById('toy'), phase='idle', timer=null, tGo=0, best=null;
+  function render(ms){
+    if(phase==='idle'){toy.className='toy-idle';toy.textContent='TAP TO START';}
+    else if(phase==='wait'){toy.className='toy-wait';toy.textContent='WAIT FOR IT…';}
+    else if(phase==='go'){toy.className='toy-go';toy.textContent='TAP NOW!';}
+    else if(phase==='early'){toy.className='toy-early';toy.textContent='TOO SOON! TAP TO RETRY';}
+    else{
+      var verdict=ms<180?'FASTEST FINGERS':ms<260?'DUEL-READY':ms<400?'TRAIN HARDER':'WERE YOU ASLEEP?';
+      toy.className='toy-result';
+      toy.innerHTML='<div class="toy-ms">'+ms+' ms</div><div class="toy-verdict">'+verdict+'</div><div class="toy-sub">best '+best+' ms · tap to go again</div>';
+    }
+  }
+  toy.addEventListener('pointerdown',function(){
+    if(phase==='idle'||phase==='result'||phase==='early'){
+      phase='wait';render();
+      timer=setTimeout(function(){tGo=performance.now();phase='go';render();},900+Math.random()*1800);
+    }else if(phase==='wait'){
+      clearTimeout(timer);phase='early';render();
+    }else if(phase==='go'){
+      var ms=Math.round(performance.now()-tGo);
+      best=(best===null)?ms:Math.min(best,ms);
+      phase='result';render(ms);
+    }
+  });
+
+  /* ---- stickman canvas duel ---- */
+  var cv=document.getElementById('stick'), S=null;
+  function drawStick(ctx,x,gy,c,face,fighting,t,air){
+    var p=Math.sin(t*11), bob=Math.abs(Math.cos(t*11))*2.5;
+    var hy=gy-24-(fighting?2:bob), sy=hy-15;
+    ctx.strokeStyle=c;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=9;
+    ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.arc(x+face*3,sy-9,5,0,7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+face*2,sy-4);ctx.lineTo(x,hy);ctx.stroke();
     ctx.beginPath();
-    if (air) {
-      ctx.moveTo(x, hy); ctx.lineTo(x + face * 8, hy + 6); ctx.lineTo(x + face * 4, hy + 13);
-      ctx.moveTo(x, hy); ctx.lineTo(x - face * 2, hy + 7); ctx.lineTo(x - face * 8, hy + 12);
-    } else if (fighting) {
-      ctx.moveTo(x, hy); ctx.lineTo(x + face * 11, (hy + gy) / 2); ctx.lineTo(x + face * 15, gy);
-      ctx.moveTo(x, hy); ctx.lineTo(x - face * 8, (hy + gy) / 2 + 2); ctx.lineTo(x - face * 13, gy);
-    } else {
-      ctx.moveTo(x, hy); ctx.lineTo(x + face * (5 + p * 6), (hy + gy) / 2); ctx.lineTo(x + face * (8 + p * 10), gy - Math.max(0, p) * 7);
-      ctx.moveTo(x, hy); ctx.lineTo(x + face * (5 - p * 6), (hy + gy) / 2); ctx.lineTo(x + face * (8 - p * 10), gy - Math.max(0, -p) * 7);
+    if(air){
+      ctx.moveTo(x,hy);ctx.lineTo(x+face*8,hy+6);ctx.lineTo(x+face*4,hy+13);
+      ctx.moveTo(x,hy);ctx.lineTo(x-face*2,hy+7);ctx.lineTo(x-face*8,hy+12);
+    }else if(fighting){
+      ctx.moveTo(x,hy);ctx.lineTo(x+face*11,(hy+gy)/2);ctx.lineTo(x+face*15,gy);
+      ctx.moveTo(x,hy);ctx.lineTo(x-face*8,(hy+gy)/2+2);ctx.lineTo(x-face*13,gy);
+    }else{
+      ctx.moveTo(x,hy);ctx.lineTo(x+face*(5+p*6),(hy+gy)/2);ctx.lineTo(x+face*(8+p*10),gy-Math.max(0,p)*7);
+      ctx.moveTo(x,hy);ctx.lineTo(x+face*(5-p*6),(hy+gy)/2);ctx.lineTo(x+face*(8-p*10),gy-Math.max(0,-p)*7);
     }
     ctx.stroke();
     ctx.beginPath();
-    if (fighting) {
-      const q = Math.max(0, Math.sin(t * 13));
-      ctx.moveTo(x + face * 2, sy); ctx.lineTo(x + face * (9 + q * 8), sy - 1); ctx.lineTo(x + face * (12 + q * 16), sy + 1 - q * 3);
-      ctx.moveTo(x + face * 2, sy); ctx.lineTo(x - face * 4, sy + 7); ctx.lineTo(x + face * 3, sy + 9);
-    } else {
-      ctx.moveTo(x + face * 2, sy); ctx.lineTo(x + face * (2 - p * 8), sy + 8);
-      ctx.moveTo(x + face * 2, sy); ctx.lineTo(x + face * (2 + p * 8), sy + 8);
+    if(fighting){
+      var q=Math.max(0,Math.sin(t*13));
+      ctx.moveTo(x+face*2,sy);ctx.lineTo(x+face*(9+q*8),sy-1);ctx.lineTo(x+face*(12+q*16),sy+1-q*3);
+      ctx.moveTo(x+face*2,sy);ctx.lineTo(x-face*4,sy+7);ctx.lineTo(x+face*3,sy+9);
+    }else{
+      ctx.moveTo(x+face*2,sy);ctx.lineTo(x+face*(2-p*8),sy+8);
+      ctx.moveTo(x+face*2,sy);ctx.lineTo(x+face*(2+p*8),sy+8);
     }
     ctx.stroke();
-    if (fighting) { const q = Math.max(0, Math.sin(t * 13)); ctx.beginPath(); ctx.arc(x + face * (13 + q * 16), sy + 1 - q * 3, 2.6, 0, 7); ctx.fill(); }
-    ctx.shadowBlur = 0;
+    if(fighting){var q2=Math.max(0,Math.sin(t*13));ctx.beginPath();ctx.arc(x+face*(13+q2*16),sy+1-q2*3,2.6,0,7);ctx.fill();}
+    ctx.shadowBlur=0;
   }
-  drawSpark(ctx, x, y) {
-    ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = '#ffd60a'; ctx.shadowColor = '#ffd60a'; ctx.shadowBlur = 16;
+  function drawSpark(ctx,x,y){
+    ctx.save();ctx.translate(x,y);
+    ctx.fillStyle='#ffd60a';ctx.shadowColor='#ffd60a';ctx.shadowBlur=16;
     ctx.beginPath();
-    for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, rr = i % 2 ? 4 : 12; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    for(var i=0;i<10;i++){var a=i*Math.PI/5,rr=i%2?4:12;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}
+    ctx.closePath();ctx.fill();ctx.restore();
   }
-  toyClick = () => {
-    const { phase } = this.state;
-    if (phase === 'idle' || phase === 'result' || phase === 'early') {
-      this.setState({ phase: 'wait' });
-      this.toyTimer = setTimeout(() => {
-        this.t0 = performance.now();
-        this.setState({ phase: 'go' });
-      }, 900 + Math.random() * 1800);
-    } else if (phase === 'wait') {
-      clearTimeout(this.toyTimer);
-      this.setState({ phase: 'early' });
-    } else if (phase === 'go') {
-      const ms = Math.round(performance.now() - this.t0);
-      this.setState((s) => ({ phase: 'result', ms, best: s.best === null ? ms : Math.min(s.best, ms) }));
+  function animStick(now){
+    requestAnimationFrame(animStick);
+    if(!cv.offsetWidth)return;
+    var w=cv.offsetWidth,h=150,dpr=Math.min(2,window.devicePixelRatio||1);
+    if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=h*dpr;}
+    var ctx=cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    if(!S)S={mode:'chase',until:0,cx:w/2,
+      a:{x:w*0.1,y:0,vy:0,nj:now+500+Math.random()*1500,ph:Math.random()*6},
+      b:{x:w*0.9,y:0,vy:0,nj:now+500+Math.random()*1500,ph:Math.random()*6}};
+    var t=now/1000,gy=h-14,sp=Math.min(2.2,w/500),A=S.a,B=S.b;
+    [A,B].forEach(function(F){
+      if(F.y<0||F.vy!==0){F.vy+=0.34;F.y+=F.vy;if(F.y>=0){F.y=0;F.vy=0;F.nj=now+1400+Math.random()*3200;}}
+    });
+    function tryJump(F,pow){if(F.y===0&&F.vy===0&&now>F.nj){F.vy=-pow;F.y=-0.01;}}
+    if(S.mode==='chase'){
+      A.x+=sp;B.x-=sp;tryJump(A,6.4);tryJump(B,6.4);
+      if(B.x-A.x<76&&A.y===0&&B.y===0){S.mode='fight';S.until=now+2400+Math.random()*1400;S.cx=Math.max(90,Math.min(w-90,(A.x+B.x)/2));}
+    }else if(S.mode==='fight'){
+      A.x=S.cx-38+Math.sin(t*2.3+A.ph)*11+Math.sin(t*5.1+A.ph)*3;
+      B.x=S.cx+38-Math.sin(t*2.7+B.ph)*11-Math.sin(t*4.3+B.ph)*3;
+      if(now>S.until){S.mode='retreat';S.until=now+1200+Math.random()*900;}
+    }else{
+      A.x-=sp*1.5;B.x+=sp*1.5;tryJump(A,5.6);tryJump(B,5.6);
+      if(now>S.until||A.x<30||B.x>w-30)S.mode='chase';
     }
-  };
-  renderVals() {
-    const { phase, ms, best, stat } = this.state;
-    const verdict = ms === null ? '' : ms < 180 ? 'FASTEST FINGERS' : ms < 260 ? 'DUEL-READY' : ms < 400 ? 'TRAIN HARDER' : 'WERE YOU ASLEEP?';
-    return {
-      showScanlines: this.props.scanlines ?? true,
-      showToy: this.props.reactionToy ?? true,
-      shapesRef: (el) => { this.shapesEl = el; },
-      stickCanvasRef: (el) => { this.stickEl = el; },
-      statDuel: Math.round(stat * 90),
-      statFee: Math.round(stat * 10),
-      statRng: Math.round(stat * 0) === 0 && stat >= 1 ? '0' : Math.round((1 - stat) * 99),
-      toyIdle: phase === 'idle', toyWait: phase === 'wait', toyGo: phase === 'go',
-      toyEarly: phase === 'early', toyResult: phase === 'result',
-      toyMs: ms, toyBest: best, toyVerdict: verdict,
-      toyClick: this.toyClick,
-    };
+    A.x=Math.max(24,Math.min(w-100,A.x));
+    B.x=Math.min(w-24,Math.max(100,B.x));
+    var f=S.mode==='fight',r=S.mode==='retreat';
+    drawStick(ctx,A.x,gy+A.y,'#00f0ff',r?-1:1,f,t,A.y<0);
+    drawStick(ctx,B.x,gy+B.y,'#ff2bd6',r?1:-1,f,t+0.47,B.y<0);
+    if(f&&Math.sin(t*13)>0.8)drawSpark(ctx,(A.x+B.x)/2,gy-36);
+  }
+  requestAnimationFrame(animStick);
+})();
+</script>
+<script>
+/* ================= QUICK DRAW — DEMO VS AI =================
+   Throwaway marketing code. The real game is server-authoritative;
+   none of this ships in the production client. Mechanics per spec:
+   3 rounds x 8 prompts (tap shapes / swipe arrows), penalties:
+   miss +500ms, false start +1000ms (next prompt skipped), timeout
+   (2s) +2000ms. Lowest cumulative time across 3 rounds wins. */
+(function(){
+'use strict';
+var COLORS=['#00f0ff','#ff2bd6','#ffd60a'];
+var DIFF={
+  easy:  {label:'EASY',  lo:700, hi:800, miss:0.12},
+  medium:{label:'MEDIUM',lo:500, hi:699, miss:0.08},
+  hard:  {label:'HARD',  lo:300, hi:499, miss:0.04},
+  ultra: {label:'ULTRA', lo:250, hi:299, miss:0.01}
+};
+var WAGERS=[50,100,250];
+var ROUNDS=3, PROMPTS=8, TIMEOUT_MS=2000;
+var P_MISS=500, P_FALSE=1000, P_TIMEOUT=1000;
+
+var overlay=document.getElementById('qdOverlay');
+var body=document.getElementById('qdBody');
+var balEl=document.getElementById('qdBalance');
+var G={bal:500, diff:'medium', wager:50, timers:[], raf:null};
+
+function fmtBal(){balEl.textContent=G.bal+' COINS';}
+function later(fn,ms){var id=setTimeout(fn,ms);G.timers.push(id);return id;}
+function clearTimers(){G.timers.forEach(clearTimeout);G.timers=[];if(G.raf)cancelAnimationFrame(G.raf);G.raf=null;}
+function rnd(a,b){return a+Math.random()*(b-a);}
+function gauss(mean,sd){var u=1-Math.random(),v=Math.random();return mean+sd*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+/* ---- round config: same committed prompts for both players ---- */
+function makeRound(){
+  var swipes=2+(Math.random()<0.5?1:0); // 2-3 swipe prompts
+  var types=[];
+  for(var i=0;i<PROMPTS;i++)types.push('tap');
+  var idx=[];for(i=1;i<PROMPTS;i++)idx.push(i); // first prompt always tap
+  idx.sort(function(){return Math.random()-0.5;});
+  for(i=0;i<swipes;i++)types[idx[i]]='swipe';
+  var prompts=[];
+  for(i=0;i<PROMPTS;i++){
+    prompts.push({
+      type:types[i],
+      delay:i===0?rnd(1500,3000):rnd(300,1200),
+      color:COLORS[Math.floor(Math.random()*3)],
+      shape:['circle','square','triangle'][Math.floor(Math.random()*3)],
+      dir:['up','down','left','right'][Math.floor(Math.random()*4)],
+      x:Math.random(), y:Math.random()
+    });
+  }
+  return prompts;
+}
+
+/* ---- AI simulation: per-prompt reaction + occasional miss ---- */
+function simAI(prompts){
+  var d=DIFF[G.diff], score=0, events=[], wall=0;
+  for(var i=0;i<prompts.length;i++){
+    var re=rnd(d.lo,d.hi);
+    if(prompts[i].type==='swipe')re+=rnd(50,100);
+    var pen=0;
+    if(Math.random()<d.miss){pen=P_MISS;re+=rnd(250,450);} // retry after miss
+    score+=re+pen;
+    wall+=prompts[i].delay+re;
+    events.push(wall);
+  }
+  return {score:Math.round(score),events:events};
+}
+
+/* ---- rendering helpers ---- */
+function shapeHTML(p,size){
+  var s=size||72;
+  if(p.type==='swipe'){
+    var g={up:'↑',down:'↓',left:'←',right:'→'}[p.dir];
+    return '<div class="qd-target" style="color:'+p.color+';font-family:Bungee;font-size:'+s+'px;line-height:1;">'+g+'</div>';
+  }
+  if(p.shape==='circle')return '<div class="qd-target" style="width:'+s+'px;height:'+s+'px;border:5px solid '+p.color+';border-radius:50%;color:'+p.color+';"></div>';
+  if(p.shape==='square')return '<div class="qd-target" style="width:'+s+'px;height:'+s+'px;border:5px solid '+p.color+';color:'+p.color+';"></div>';
+  var h=Math.round(s*0.9);
+  return '<div class="qd-target" style="width:0;height:0;border-left:'+Math.round(s/2)+'px solid transparent;border-right:'+Math.round(s/2)+'px solid transparent;border-bottom:'+h+'px solid '+p.color+';color:'+p.color+';"></div>';
+}
+
+/* ================= screens ================= */
+function showSetup(){
+  clearTimers();
+  if(G.bal<WAGERS[0]){G.bal=500;} // auto-refill demo coins
+  fmtBal();
+  var h='<div class="qd-screen">'
+    +'<h2 class="qd-h">QUICK <span style="color:#ffd60a;">DRAW</span></h2>'
+    +'<p class="qd-sub">8 prompts per round · 3 rounds. Tap the shapes, swipe the arrows, don\'t jump the gun. Lowest total time takes the pot.</p>'
+    +'<p class="qd-lbl">RIVAL AI</p><div class="qd-opts" id="qdDiffs"></div>'
+    +'<p class="qd-lbl">WAGER</p><div class="qd-opts" id="qdWagers"></div>'
+    +'<button class="qd-start" id="qdStart">START DUEL</button>'
+    +'</div>';
+  body.innerHTML=h;
+  var dEl=document.getElementById('qdDiffs');
+  Object.keys(DIFF).forEach(function(k){
+    var d=DIFF[k];
+    var b=document.createElement('div');
+    b.className='qd-opt'+(G.diff===k?' sel':'');
+    b.innerHTML=d.label+'<small>'+d.lo+'–'+d.hi+'ms reactions</small>';
+    b.onclick=function(){G.diff=k;showSetup();};
+    dEl.appendChild(b);
+  });
+  var wEl=document.getElementById('qdWagers');
+  WAGERS.forEach(function(w){
+    var b=document.createElement('div');
+    b.className='qd-opt'+(G.wager===w?' sel':'');
+    b.style.borderColor='#ffd60a';b.style.color=G.wager===w?'#05071c':'#ffd60a';
+    if(G.wager===w){b.style.background='#ffd60a';b.style.boxShadow='0 0 24px rgba(255,214,10,.6)';}
+    else b.style.background='rgba(255,214,10,.06)';
+    b.innerHTML=w+' COINS';
+    b.onclick=function(){G.wager=w;showSetup();};
+    wEl.appendChild(b);
+  });
+  document.getElementById('qdStart').onclick=startMatch;
+}
+
+function startMatch(){
+  G.bal-=G.wager;fmtBal();
+  G.round=0;G.youTotal=0;G.aiTotal=0;
+  startRound();
+}
+
+function startRound(){
+  clearTimers();
+  G.round++;
+  G.prompts=makeRound();
+  G.ai=simAI(G.prompts);
+  G.pIdx=0;G.youScore=0;G.aiDone=0;G.skipNext=false;G.phase='idle';
+  var pips='';for(var pi=0;pi<PROMPTS;pi++)pips+='<span class="qd-pip"></span>';
+  body.innerHTML=
+    '<div class="qd-hud">'
+    +'<div class="you">YOU<small id="qdYouStat">0ms</small></div>'
+    +'<div class="round">ROUND '+G.round+'/'+ROUNDS+'<div class="qd-pips" id="qdPips">'+pips+'</div></div>'
+    +'<div class="rival">RIVAL<small id="qdAiStat">0 / '+PROMPTS+'</small></div>'
+    +'</div>'
+    +'<div class="qd-arena" id="qdArena"></div>';
+  G.arena=document.getElementById('qdArena');
+  G.arena.addEventListener('pointerdown',onDown);
+  G.arena.addEventListener('pointerup',onUp);
+  // countdown
+  var n=3;
+  function count(){
+    if(n>0){G.arena.innerHTML='<div class="qd-msg"><div class="qd-count">'+n+'</div></div>';n--;later(count,700);}
+    else{G.arena.innerHTML='<div class="qd-msg"><div class="qd-count" style="color:#00f0ff;">GO!</div></div>';
+      later(function(){G.arena.innerHTML='';scheduleAI();nextPrompt();},500);}
+  }
+  count();
+}
+
+function scheduleAI(){
+  G.ai.events.forEach(function(t,i){
+    later(function(){
+      G.aiDone=i+1;
+      var el=document.getElementById('qdAiStat');
+      if(el)el.textContent=G.aiDone+' / '+PROMPTS;
+    },t);
+  });
+}
+
+function updateYou(){
+  var el=document.getElementById('qdYouStat');
+  if(el)el.textContent=Math.round(G.youScore)+'ms';
+  var pips=document.getElementById('qdPips');
+  if(pips)for(var i=0;i<pips.children.length;i++)pips.children[i].className='qd-pip'+(i<G.pIdx?' on':'');
+}
+
+function flash(txt,color){
+  var f=document.createElement('div');
+  f.className='qd-flash';f.style.color=color;f.textContent=txt;
+  f.style.textShadow='0 0 14px '+color;
+  G.arena.appendChild(f);
+  later(function(){if(f.parentNode)f.parentNode.removeChild(f);},650);
+}
+
+function nextPrompt(){
+  if(G.pIdx>=PROMPTS){endRound();return;}
+  if(G.skipNext){
+    G.skipNext=false;G.pIdx++;updateYou();
+    nextPrompt();return;
+  }
+  var p=G.prompts[G.pIdx];
+  G.phase='delay';
+  later(function(){showPrompt(p);},p.delay);
+}
+
+function showPrompt(p){
+  G.phase='prompt';G.cur=p;
+  var w=G.arena.clientWidth,h=G.arena.clientHeight,S=158;
+  var x=40+p.x*(w-80-S), y=40+p.y*(h-80-S);
+  var holder=document.createElement('div');
+  holder.id='qdCur';
+  holder.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;';
+  holder.innerHTML=shapeHTML(p,p.type==='swipe'?112:126);
+  G.arena.appendChild(holder);
+  G.shownAt=performance.now();
+  G.toTimer=later(function(){ // timeout — auto-clear, mild +1000ms, no message
+    G.youScore+=P_TIMEOUT;clearPrompt();
+    G.pIdx++;updateYou();nextPrompt();
+  },TIMEOUT_MS);
+}
+
+function clearPrompt(){
+  var el=document.getElementById('qdCur');
+  if(el)el.parentNode.removeChild(el);
+  G.phase='between';
+}
+
+function hitTest(x,y){
+  var el=document.getElementById('qdCur');
+  if(!el)return false;
+  var r=el.getBoundingClientRect();
+  // generous: inflated box OR radial catch from center — whole shape + halo clickable
+  var mx=Math.max(20,r.width*0.35),my=Math.max(20,r.height*0.35);
+  if(x>=r.left-mx&&x<=r.right+mx&&y>=r.top-my&&y<=r.bottom+my)return true;
+  var cx=r.left+r.width/2,cy=r.top+r.height/2;
+  var rad=Math.max(r.width,r.height)*0.85;
+  return (x-cx)*(x-cx)+(y-cy)*(y-cy)<=rad*rad;
+}
+function shake(){
+  var el=document.getElementById('qdCur');
+  if(el){el.classList.remove('qd-shake');void el.offsetWidth;el.classList.add('qd-shake');}
+}
+function deny(){
+  G.arena.classList.add('deny');
+  later(function(){G.arena.classList.remove('deny');},220);
+}
+
+function onDown(e){
+  if(G.phase==='delay'){ // false start — silent penalty, red pulse cue only
+    G.youScore+=P_FALSE;G.skipNext=true;updateYou();
+    deny();
+    return;
+  }
+  if(G.phase!=='prompt')return;
+  G.down={x:e.clientX,y:e.clientY,t:performance.now()};
+}
+function onUp(e){
+  if(G.phase!=='prompt'||!G.down)return;
+  var dx=e.clientX-G.down.x, dy=e.clientY-G.down.y;
+  var dist=Math.sqrt(dx*dx+dy*dy);
+  var p=G.cur, ok=false, rt=0;
+  if(dist<30){ // tap
+    if(p.type==='tap'&&hitTest(G.down.x,G.down.y)){ok=true;rt=G.down.t-G.shownAt;}
+  }else{ // swipe
+    var dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+    if(p.type==='swipe'&&dir===p.dir){ok=true;rt=performance.now()-G.shownAt;}
+  }
+  G.down=null;
+  if(ok){
+    clearTimeout(G.toTimer);
+    G.youScore+=rt;clearPrompt();
+    flash(Math.round(rt)+'ms',p.color);
+    G.pIdx++;updateYou();nextPrompt();
+  }else{ // miss — silent penalty, target shakes
+    G.youScore+=P_MISS;updateYou();
+    shake();
   }
 }
+
+function endRound(){
+  G.phase='done';
+  var youMs=Math.round(G.youScore), aiMs=G.ai.score;
+  G.youTotal+=youMs;G.aiTotal+=aiMs;
+  var aiWall=G.ai.events[G.ai.events.length-1];
+  var wait=Math.max(0,aiWall-0); // let rival counter finish if still going
+  var show=function(){
+    var win=youMs<aiMs, tie=youMs===aiMs;
+    var vcol=tie?'#ffd60a':win?'#00f0ff':'#ff2bd6';
+    var verdict=tie?'DEAD HEAT':win?'ROUND YOURS':'RIVAL TAKES IT';
+    body.innerHTML='<div class="qd-screen">'
+      +'<p class="qd-lbl">ROUND '+G.round+' / '+ROUNDS+'</p>'
+      +'<div class="qd-res-row">'
+      +'<div><div class="qd-res-num" style="color:#00f0ff;">'+youMs+'ms</div><p class="qd-lbl">YOU</p></div>'
+      +'<div class="qd-vs-sm">VS</div>'
+      +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+aiMs+'ms</div><p class="qd-lbl">RIVAL</p></div>'
+      +'</div>'
+      +'<h2 class="qd-h" style="text-shadow:0 0 24px '+vcol+';color:'+vcol+';font-size:clamp(20px,5vw,32px);">'+verdict+'</h2>'
+      +'<p class="qd-sub">Totals — you '+G.youTotal+'ms · rival '+G.aiTotal+'ms</p>'
+      +'</div>';
+    later(G.round<ROUNDS?startRound:endMatch,1800);
+  };
+  // if AI still "playing", brief suspense
+  later(show,300);
+}
+
+function endMatch(){
+  var win=G.youTotal<G.aiTotal, tie=G.youTotal===G.aiTotal;
+  var pot=G.wager*2;
+  if(win)G.bal+=pot;else if(tie)G.bal+=G.wager;
+  fmtBal();
+  var col=tie?'#ffd60a':win?'#00f0ff':'#ff2bd6';
+  var big=tie?'DRAW':win?'YOU WIN':'YOU LOSE';
+  var sub=tie?'Stakes refunded. Run it back.':win?'+'+pot+' fake Coins. In the real thing, that\'s TON.':'Rival takes '+pot+' Coins. Revenge?';
+  body.innerHTML='<div class="qd-screen">'
+    +'<h2 class="qd-h" style="color:'+col+';text-shadow:0 0 34px '+col+';font-size:clamp(36px,10vw,64px);">'+big+'</h2>'
+    +'<div class="qd-res-row">'
+    +'<div><div class="qd-res-num" style="color:#00f0ff;">'+G.youTotal+'ms</div><p class="qd-lbl">YOU</p></div>'
+    +'<div class="qd-vs-sm">VS</div>'
+    +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+G.aiTotal+'ms</div><p class="qd-lbl">RIVAL ('+DIFF[G.diff].label+')</p></div>'
+    +'</div>'
+    +'<p class="qd-sub">'+sub+'</p>'
+    +'<div class="qd-opts">'
+    +'<div class="qd-opt" id="qdAgain" style="border-color:#ffd60a;color:#ffd60a;background:rgba(255,214,10,.06);">REMATCH</div>'
+    +'<div class="qd-opt" id="qdMenu">CHANGE SETUP</div>'
+    +'</div></div>';
+  document.getElementById('qdAgain').onclick=function(){
+    if(G.bal<G.wager){showSetup();return;}
+    startMatch();
+  };
+  document.getElementById('qdMenu').onclick=showSetup;
+}
+
+/* ---- open/close ---- */
+document.getElementById('qdTryBtn').addEventListener('click',function(){
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  showSetup();
+});
+document.getElementById('qdClose').addEventListener('click',function(){
+  clearTimers();
+  overlay.classList.remove('open');
+  document.body.style.overflow='';
+});
+})();
 </script>
 </body>
 </html>
