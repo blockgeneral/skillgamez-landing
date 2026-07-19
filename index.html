@@ -151,6 +151,12 @@ footer{position:relative;z-index:1;border-top:2px solid rgba(0,240,255,.25);padd
 @keyframes qdshake{0%,100%{translate:0 0}25%{translate:-7px 0}75%{translate:7px 0}}
 .qd-shake{animation:qdshake .22s;}
 .qd-arena.deny{box-shadow:inset 0 0 80px rgba(255,43,214,.4);transition:box-shadow .1s;}
+.sim-zone{position:absolute;border:4px solid;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:none;transition:filter .1s,box-shadow .1s;}
+.sim-watch{font-family:'Bungee';font-size:15px;letter-spacing:.2em;position:absolute;left:50%;top:12px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;}
+@media (max-width:640px){
+  h1{font-size:clamp(38px,11.5vw,60px);text-shadow:0 0 18px rgba(0,240,255,.5),3px 3px 0 #ff2bd6,6px 6px 0 rgba(0,240,255,.35);}
+  .tagline{font-size:clamp(17px,4.6vw,22px);max-width:92vw;padding:0 4px;}
+}
 </style>
 </head>
 <body>
@@ -253,6 +259,7 @@ footer{position:relative;z-index:1;border-top:2px solid rgba(0,240,255,.25);padd
       <div class="game-body">
         <div class="game-title-row"><h3>SIMON SHOWDOWN</h3><span class="game-time">~60s</span></div>
         <p>Watch the pattern. Tap it back. Speed × memory.</p>
+        <button class="try-btn" id="simTryBtn" style="background:#00f0ff;box-shadow:4px 4px 0 #ffd60a;">▶ TRY IT VS AI</button>
       </div>
     </div>
 
@@ -291,6 +298,17 @@ footer{position:relative;z-index:1;border-top:2px solid rgba(0,240,255,.25);padd
     <button class="qd-close" id="qdClose">✕ EXIT</button>
   </div>
   <div id="qdBody" style="display:flex;flex-direction:column;flex:1;position:relative;"></div>
+</div>
+
+<!-- ============ SIMON SHOWDOWN DEMO OVERLAY ============ -->
+<div class="qd-overlay" id="simOverlay">
+  <div class="qd-grid"></div>
+  <div class="qd-top">
+    <span class="qd-demo-tag" style="background:#00f0ff;box-shadow:3px 3px 0 #ffd60a;">DEMO · FAKE COINS · VS AI</span>
+    <span class="qd-balance" id="simBalance"></span>
+    <button class="qd-close" id="simClose">✕ EXIT</button>
+  </div>
+  <div id="simBody" style="display:flex;flex-direction:column;flex:1;position:relative;"></div>
 </div>
 
 <!-- ============ FOOTER ============ -->
@@ -471,6 +489,7 @@ var overlay=document.getElementById('qdOverlay');
 var body=document.getElementById('qdBody');
 var balEl=document.getElementById('qdBalance');
 var G={bal:500, diff:'medium', wager:50, timers:[], raf:null};
+window.__qdDebug=G; // test hook, harmless in production
 
 function fmtBal(){balEl.textContent=G.bal+' COINS';}
 function later(fn,ms){var id=setTimeout(fn,ms);G.timers.push(id);return id;}
@@ -635,11 +654,19 @@ function nextPrompt(){
 
 function showPrompt(p){
   G.phase='prompt';G.cur=p;
-  var w=G.arena.clientWidth,h=G.arena.clientHeight,S=158;
-  var x=40+p.x*(w-80-S), y=40+p.y*(h-80-S);
+  var w=G.arena.clientWidth,h=G.arena.clientHeight,S=158,PAD=34;
+  var span=Math.max(0,w-80-S), spanY=Math.max(0,h-80-S);
+  var x=40+p.x*span, y=40+p.y*spanY;
   var holder=document.createElement('div');
   holder.id='qdCur';
-  holder.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;';
+  if(p.type==='tap'){
+    // the shape itself (plus a 34px halo) IS the hit element — no coordinate math
+    holder.style.cssText='position:absolute;left:'+(x-PAD)+'px;top:'+(y-PAD)+'px;padding:'+PAD+'px;cursor:pointer;touch-action:none;';
+    holder.addEventListener('pointerdown',onTargetDown);
+  }else{
+    // swipe prompts: gesture is captured on the arena; arrow is visual only
+    holder.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;pointer-events:none;';
+  }
   holder.innerHTML=shapeHTML(p,p.type==='swipe'?112:126);
   G.arena.appendChild(holder);
   G.shownAt=performance.now();
@@ -649,23 +676,22 @@ function showPrompt(p){
   },TIMEOUT_MS);
 }
 
+function onTargetDown(e){ // guaranteed hit: event fired by the shape element itself
+  e.stopPropagation();
+  if(G.phase!=='prompt'||G.cur.type!=='tap')return;
+  var rt=performance.now()-G.shownAt;
+  clearTimeout(G.toTimer);
+  G.youScore+=rt;clearPrompt();
+  flash(Math.round(rt)+'ms',G.cur.color);
+  G.pIdx++;updateYou();nextPrompt();
+}
+
 function clearPrompt(){
   var el=document.getElementById('qdCur');
   if(el)el.parentNode.removeChild(el);
   G.phase='between';
 }
 
-function hitTest(x,y){
-  var el=document.getElementById('qdCur');
-  if(!el)return false;
-  var r=el.getBoundingClientRect();
-  // generous: inflated box OR radial catch from center — whole shape + halo clickable
-  var mx=Math.max(20,r.width*0.35),my=Math.max(20,r.height*0.35);
-  if(x>=r.left-mx&&x<=r.right+mx&&y>=r.top-my&&y<=r.bottom+my)return true;
-  var cx=r.left+r.width/2,cy=r.top+r.height/2;
-  var rad=Math.max(r.width,r.height)*0.85;
-  return (x-cx)*(x-cx)+(y-cy)*(y-cy)<=rad*rad;
-}
 function shake(){
   var el=document.getElementById('qdCur');
   if(el){el.classList.remove('qd-shake');void el.offsetWidth;el.classList.add('qd-shake');}
@@ -682,29 +708,32 @@ function onDown(e){
     return;
   }
   if(G.phase!=='prompt')return;
+  if(G.cur.type==='tap'){
+    // reached the arena = missed the shape (shape stops propagation on hit)
+    G.youScore+=P_MISS;updateYou();
+    shake();
+    return;
+  }
   G.down={x:e.clientX,y:e.clientY,t:performance.now()};
 }
 function onUp(e){
-  if(G.phase!=='prompt'||!G.down)return;
+  if(G.phase!=='prompt'||!G.down||G.cur.type!=='swipe')return;
   var dx=e.clientX-G.down.x, dy=e.clientY-G.down.y;
   var dist=Math.sqrt(dx*dx+dy*dy);
-  var p=G.cur, ok=false, rt=0;
-  if(dist<30){ // tap
-    if(p.type==='tap'&&hitTest(G.down.x,G.down.y)){ok=true;rt=G.down.t-G.shownAt;}
-  }else{ // swipe
-    var dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
-    if(p.type==='swipe'&&dir===p.dir){ok=true;rt=performance.now()-G.shownAt;}
-  }
   G.down=null;
-  if(ok){
-    clearTimeout(G.toTimer);
-    G.youScore+=rt;clearPrompt();
-    flash(Math.round(rt)+'ms',p.color);
-    G.pIdx++;updateYou();nextPrompt();
-  }else{ // miss — silent penalty, target shakes
-    G.youScore+=P_MISS;updateYou();
-    shake();
+  if(dist>=30){
+    var dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+    if(dir===G.cur.dir){
+      var rt=performance.now()-G.shownAt;
+      clearTimeout(G.toTimer);
+      G.youScore+=rt;clearPrompt();
+      flash(Math.round(rt)+'ms',G.cur.color);
+      G.pIdx++;updateYou();nextPrompt();
+      return;
+    }
   }
+  G.youScore+=P_MISS;updateYou(); // tapped or swiped wrong way — silent
+  shake();
 }
 
 function endRound(){
@@ -767,6 +796,323 @@ document.getElementById('qdTryBtn').addEventListener('click',function(){
   showSetup();
 });
 document.getElementById('qdClose').addEventListener('click',function(){
+  clearTimers();
+  overlay.classList.remove('open');
+  document.body.style.overflow='';
+});
+})();
+</script>
+<script>
+/* ================= SIMON SHOWDOWN — DEMO VS AI =================
+   Throwaway marketing code, same conventions as the Quick Draw demo.
+   Spec: server-generated sequence plays on both screens, both players
+   reproduce it. Score = (correct/total)*100 - completion_ms/100.
+   Rounds: 4 -> 6 -> 8 taps. Best of 3 rounds wins. Demo skips the
+   multi-touch prompts (mouse-friendly). */
+(function(){
+'use strict';
+var ZCOLORS=['#00f0ff','#ff2bd6','#ffd60a','#66ff66','#ff9d00','#b388ff'];
+var DIFF={
+  easy:  {label:'EASY',  lo:700, hi:800, acc:0.80},
+  medium:{label:'MEDIUM',lo:500, hi:699, acc:0.88},
+  hard:  {label:'HARD',  lo:300, hi:499, acc:0.94},
+  ultra: {label:'ULTRA', lo:250, hi:299, acc:0.98}
+};
+var WAGERS=[50,100,250];
+var SEQ_LEN=[4,6,8], ZONE_N=[4,6,6], ROUNDS=3;
+var FLASH=400, GAP=200, INPUT_CAP=15000;
+
+var overlay=document.getElementById('simOverlay');
+var body=document.getElementById('simBody');
+var balEl=document.getElementById('simBalance');
+var G={bal:500, diff:'medium', wager:50, timers:[]};
+window.__simDebug=G; // test hook, harmless in production
+
+function fmtBal(){balEl.textContent=G.bal+' COINS';}
+function later(fn,ms){var id=setTimeout(fn,ms);G.timers.push(id);return id;}
+function clearTimers(){G.timers.forEach(clearTimeout);G.timers=[];}
+function rnd(a,b){return a+Math.random()*(b-a);}
+function rgba(hex,a){
+  var n=parseInt(hex.slice(1),16);
+  return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';
+}
+function deny(){
+  if(!G.arena)return;
+  G.arena.classList.add('deny');
+  later(function(){if(G.arena)G.arena.classList.remove('deny');},220);
+}
+
+/* ---- round config: same committed sequence for both players ---- */
+function makeRound(r){
+  var zones=ZONE_N[r-1], len=SEQ_LEN[r-1], seq=[], prev=-1;
+  for(var i=0;i<len;i++){
+    var z;do{z=Math.floor(Math.random()*zones);}while(z===prev);
+    seq.push(z);prev=z;
+  }
+  return {zones:zones,seq:seq};
+}
+
+/* ---- AI: per-tap accuracy + per-tap speed, same tiers as Quick Draw ---- */
+function simAI(len){
+  var d=DIFF[G.diff], correct=0, t=rnd(200,400), events=[];
+  for(var i=0;i<len;i++){
+    if(Math.random()<d.acc)correct++;
+    t+=rnd(d.lo,d.hi);
+    events.push(t);
+  }
+  var score=(correct/len)*100-t/100;
+  return {score:Math.round(score*10)/10,wall:t,events:events,correct:correct};
+}
+
+/* ================= screens ================= */
+function showSetup(){
+  clearTimers();
+  if(G.bal<WAGERS[0])G.bal=500;
+  fmtBal();
+  body.innerHTML='<div class="qd-screen">'
+    +'<h2 class="qd-h">SIMON <span style="color:#00f0ff;">SHOWDOWN</span></h2>'
+    +'<p class="qd-sub">Watch the zones flash. Tap the pattern back — fast and in order. Sequences grow each round: 4, 6, then 8. Best of 3 takes the pot.</p>'
+    +'<p class="qd-lbl">RIVAL AI</p><div class="qd-opts" id="simDiffs"></div>'
+    +'<p class="qd-lbl">WAGER</p><div class="qd-opts" id="simWagers"></div>'
+    +'<button class="qd-start" id="simStart">START DUEL</button>'
+    +'</div>';
+  var dEl=document.getElementById('simDiffs');
+  Object.keys(DIFF).forEach(function(k){
+    var d=DIFF[k];
+    var b=document.createElement('div');
+    b.className='qd-opt'+(G.diff===k?' sel':'');
+    b.innerHTML=d.label+'<small>'+Math.round(d.acc*100)+'% memory · '+d.lo+'–'+d.hi+'ms taps</small>';
+    b.onclick=function(){G.diff=k;showSetup();};
+    dEl.appendChild(b);
+  });
+  var wEl=document.getElementById('simWagers');
+  WAGERS.forEach(function(w){
+    var b=document.createElement('div');
+    b.className='qd-opt'+(G.wager===w?' sel':'');
+    b.style.borderColor='#ffd60a';b.style.color=G.wager===w?'#05071c':'#ffd60a';
+    if(G.wager===w){b.style.background='#ffd60a';b.style.boxShadow='0 0 24px rgba(255,214,10,.6)';}
+    else b.style.background='rgba(255,214,10,.06)';
+    b.innerHTML=w+' COINS';
+    b.onclick=function(){G.wager=w;showSetup();};
+    wEl.appendChild(b);
+  });
+  document.getElementById('simStart').onclick=startMatch;
+}
+
+function startMatch(){
+  G.bal-=G.wager;fmtBal();
+  G.round=0;G.youWins=0;G.aiWins=0;G.youTotalScore=0;G.aiTotalScore=0;
+  startRound();
+}
+
+function startRound(){
+  clearTimers();
+  G.round++;
+  G.cfg=makeRound(G.round);
+  G.ai=simAI(G.cfg.seq.length);
+  G.tapIdx=0;G.correct=0;G.aiDone=0;G.phase='idle';
+  var len=G.cfg.seq.length, pips='';
+  for(var i=0;i<len;i++)pips+='<span class="qd-pip"></span>';
+  body.innerHTML=
+    '<div class="qd-hud">'
+    +'<div class="you">YOU<small id="simYouStat">0 / '+len+'</small></div>'
+    +'<div class="round">ROUND '+G.round+'/'+ROUNDS+'<div class="qd-pips" id="simPips">'+pips+'</div></div>'
+    +'<div class="rival">RIVAL<small id="simAiStat">0 / '+len+'</small></div>'
+    +'</div>'
+    +'<div class="qd-arena" id="simArena"></div>';
+  G.arena=document.getElementById('simArena');
+  buildZones();
+  var n=3;
+  (function count(){
+    var m=document.getElementById('simMsg');
+    if(n>0){setMsg(n,'#ffd60a');n--;later(count,700);}
+    else{later(playback,300);}
+  })();
+}
+
+function setMsg(txt,color){
+  var el=document.getElementById('simMsg');
+  if(!el){
+    el=document.createElement('div');
+    el.id='simMsg';el.className='qd-msg';
+    el.innerHTML='<div class="qd-count" id="simMsgTxt"></div>';
+    G.arena.appendChild(el);
+  }
+  var t=document.getElementById('simMsgTxt');
+  t.textContent=txt;t.style.color=color;
+  t.style.textShadow='0 0 40px '+rgba(color,0.8);
+}
+function clearMsg(){
+  var el=document.getElementById('simMsg');
+  if(el)el.parentNode.removeChild(el);
+}
+function setWatch(txt,color){
+  var el=document.getElementById('simWatch');
+  if(!el){
+    el=document.createElement('div');
+    el.id='simWatch';el.className='sim-watch';
+    G.arena.appendChild(el);
+  }
+  el.textContent=txt;el.style.color=color;
+  el.style.textShadow='0 0 12px '+rgba(color,0.7);
+}
+
+function buildZones(){
+  var n=G.cfg.zones, w=G.arena.clientWidth, h=G.arena.clientHeight-40;
+  var cols=n===4?2:(w>h?3:2), rows=Math.ceil(n/cols), gap=16;
+  var size=Math.min((w-gap*(cols+1))/cols,(h-gap*(rows+1))/rows,190);
+  var gw=cols*size+(cols-1)*gap, gh=rows*size+(rows-1)*gap;
+  var ox=(w-gw)/2, oy=40+(h-gh)/2;
+  G.zoneEls=[];
+  for(var i=0;i<n;i++){
+    var c=ZCOLORS[i];
+    var el=document.createElement('div');
+    el.className='sim-zone';
+    el.dataset.idx=i;
+    el.style.cssText='left:'+(ox+(i%cols)*(size+gap))+'px;top:'+(oy+Math.floor(i/cols)*(size+gap))+'px;width:'+size+'px;height:'+size+'px;border-color:'+c+';background:'+rgba(c,0.08)+';color:'+c+';';
+    (function(idx,elm,col){
+      elm.addEventListener('pointerdown',function(){onZone(idx,elm,col);});
+    })(i,el,c);
+    G.arena.appendChild(el);
+  }
+}
+
+function lightZone(i,on){
+  var el=G.arena.querySelector('.sim-zone[data-idx="'+i+'"]');
+  if(!el)return;
+  var c=ZCOLORS[i];
+  if(on){el.style.background=c;el.style.boxShadow='0 0 44px '+rgba(c,0.9);}
+  else{el.style.background=rgba(c,0.08);el.style.boxShadow='none';}
+}
+
+function playback(){
+  G.phase='watch';
+  clearMsg();
+  setWatch('WATCH THE PATTERN','#ffd60a');
+  var seq=G.cfg.seq;
+  seq.forEach(function(z,i){
+    later(function(){lightZone(z,true);},i*(FLASH+GAP));
+    later(function(){lightZone(z,false);},i*(FLASH+GAP)+FLASH);
+  });
+  later(go,seq.length*(FLASH+GAP)+300);
+}
+
+function go(){
+  G.phase='input';
+  G.goAt=performance.now();
+  setWatch('YOUR TURN — TAP IT BACK','#00f0ff');
+  setMsg('GO!','#00f0ff');
+  later(clearMsg,500);
+  scheduleAI();
+  G.capTimer=later(function(){ // safety cap: fill remaining as incorrect
+    while(G.tapIdx<G.cfg.seq.length){G.tapIdx++;}
+    updateYou();finishInput();
+  },INPUT_CAP);
+}
+
+function scheduleAI(){
+  G.ai.events.forEach(function(t,i){
+    later(function(){
+      G.aiDone=i+1;
+      var el=document.getElementById('simAiStat');
+      if(el)el.textContent=G.aiDone+' / '+G.cfg.seq.length;
+    },t);
+  });
+}
+
+function updateYou(){
+  var el=document.getElementById('simYouStat');
+  if(el)el.textContent=G.tapIdx+' / '+G.cfg.seq.length;
+  var pips=document.getElementById('simPips');
+  if(pips)for(var i=0;i<pips.children.length;i++)pips.children[i].className='qd-pip'+(i<G.tapIdx?' on':'');
+}
+
+function onZone(idx,el,c){
+  if(G.phase==='watch'){deny();return;} // jumping the gun — silent cue
+  if(G.phase!=='input')return;
+  var expected=G.cfg.seq[G.tapIdx];
+  if(idx===expected){
+    G.correct++;
+    lightZone(idx,true);
+    (function(z){later(function(){lightZone(z,false);},140);})(idx);
+  }else{
+    el.classList.remove('qd-shake');void el.offsetWidth;el.classList.add('qd-shake');
+  }
+  G.tapIdx++;
+  updateYou();
+  if(G.tapIdx>=G.cfg.seq.length)finishInput();
+}
+
+function finishInput(){
+  if(G.phase!=='input')return;
+  G.phase='waitai';
+  clearTimeout(G.capTimer);
+  var ms=performance.now()-G.goAt;
+  G.youScore=Math.round(((G.correct/G.cfg.seq.length)*100-ms/100)*10)/10;
+  var elapsed=performance.now()-G.goAt;
+  var wait=Math.max(0,G.ai.wall-elapsed)+300;
+  setWatch('RIVAL FINISHING…','#ff2bd6');
+  later(endRound,wait);
+}
+
+function endRound(){
+  G.phase='done';
+  var you=G.youScore, ai=G.ai.score;
+  G.youTotalScore+=you;G.aiTotalScore+=ai;
+  var win=you>ai, tie=you===ai;
+  if(win)G.youWins++;else if(!tie)G.aiWins++;
+  var vcol=tie?'#ffd60a':win?'#00f0ff':'#ff2bd6';
+  var verdict=tie?'DEAD HEAT':win?'ROUND YOURS':'RIVAL TAKES IT';
+  body.innerHTML='<div class="qd-screen">'
+    +'<p class="qd-lbl">ROUND '+G.round+' / '+ROUNDS+'</p>'
+    +'<div class="qd-res-row">'
+    +'<div><div class="qd-res-num" style="color:#00f0ff;">'+you.toFixed(1)+'</div><p class="qd-lbl">YOU</p></div>'
+    +'<div class="qd-vs-sm">VS</div>'
+    +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+ai.toFixed(1)+'</div><p class="qd-lbl">RIVAL</p></div>'
+    +'</div>'
+    +'<h2 class="qd-h" style="color:'+vcol+';text-shadow:0 0 24px '+vcol+';font-size:clamp(20px,5vw,32px);">'+verdict+'</h2>'
+    +'<p class="qd-sub">Rounds — you '+G.youWins+' · rival '+G.aiWins+'</p>'
+    +'</div>';
+  later(G.round<ROUNDS?startRound:endMatch,1800);
+}
+
+function endMatch(){
+  var win,tie=false;
+  if(G.youWins!==G.aiWins)win=G.youWins>G.aiWins;
+  else if(G.youTotalScore!==G.aiTotalScore)win=G.youTotalScore>G.aiTotalScore;
+  else{win=false;tie=true;}
+  var pot=G.wager*2;
+  if(win)G.bal+=pot;else if(tie)G.bal+=G.wager;
+  fmtBal();
+  var col=tie?'#ffd60a':win?'#00f0ff':'#ff2bd6';
+  var big=tie?'DRAW':win?'YOU WIN':'YOU LOSE';
+  var sub=tie?'Stakes refunded. Run it back.':win?'+'+pot+' fake Coins. In the real thing, that\'s TON.':'Rival takes '+pot+' Coins. Revenge?';
+  body.innerHTML='<div class="qd-screen">'
+    +'<h2 class="qd-h" style="color:'+col+';text-shadow:0 0 34px '+col+';font-size:clamp(36px,10vw,64px);">'+big+'</h2>'
+    +'<div class="qd-res-row">'
+    +'<div><div class="qd-res-num" style="color:#00f0ff;">'+G.youWins+'</div><p class="qd-lbl">YOUR ROUNDS</p></div>'
+    +'<div class="qd-vs-sm">VS</div>'
+    +'<div><div class="qd-res-num" style="color:#ff2bd6;">'+G.aiWins+'</div><p class="qd-lbl">RIVAL ('+DIFF[G.diff].label+')</p></div>'
+    +'</div>'
+    +'<p class="qd-sub">'+sub+'</p>'
+    +'<div class="qd-opts">'
+    +'<div class="qd-opt" id="simAgain" style="border-color:#ffd60a;color:#ffd60a;background:rgba(255,214,10,.06);">REMATCH</div>'
+    +'<div class="qd-opt" id="simMenu">CHANGE SETUP</div>'
+    +'</div></div>';
+  document.getElementById('simAgain').onclick=function(){
+    if(G.bal<G.wager){showSetup();return;}
+    startMatch();
+  };
+  document.getElementById('simMenu').onclick=showSetup;
+}
+
+/* ---- open/close ---- */
+document.getElementById('simTryBtn').addEventListener('click',function(){
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  showSetup();
+});
+document.getElementById('simClose').addEventListener('click',function(){
   clearTimers();
   overlay.classList.remove('open');
   document.body.style.overflow='';
