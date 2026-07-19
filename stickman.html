@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Stickman Fight — SkillGamez Demo</title>
+<meta name="description" content="Stickman Fight: read your opponent, strike first. Playable demo vs AI — part of SkillGamez.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:#05071c;color:#eafaff;font-family:'Space Grotesk',sans-serif;overflow:hidden;}
+body{display:flex;flex-direction:column;}
+.gridbg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);background-size:44px 44px;}
+.hud{position:relative;z-index:2;padding:10px 14px 6px;display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;}
+.bars{display:flex;flex-direction:column;gap:4px;}
+.hp,.sta{height:16px;border:2px solid;position:relative;overflow:hidden;background:rgba(255,255,255,.04);}
+.hp{border-color:#00f0ff;}.bars.foe .hp{border-color:#ff2bd6;}
+.sta{height:8px;border-width:1px;border-color:rgba(127,168,201,.5);}
+.hp>div,.sta>div{position:absolute;top:0;bottom:0;transition:width .12s;}
+.hp>div{background:#00f0ff;box-shadow:0 0 12px #00f0ff;left:0;}
+.bars.foe .hp>div{background:#ff2bd6;box-shadow:0 0 12px #ff2bd6;left:auto;right:0;}
+.sta>div{background:#00f0ff;left:0;}
+.bars.foe .sta>div{left:auto;right:0;}
+.mid{text-align:center;font-family:'Bungee';}
+#sfTimer{font-size:32px;color:#ffd60a;text-shadow:0 0 16px rgba(255,214,10,.7);line-height:1;}
+.tag{font-family:'Bungee';font-size:9px;letter-spacing:.1em;margin-bottom:3px;}
+.bars.you .tag{color:#00f0ff;}.bars.foe .tag{color:#ff2bd6;text-align:right;}
+#sfCanvas{position:relative;z-index:1;flex:1;width:100%;touch-action:none;}
+#sfBanner{position:fixed;left:0;right:0;top:24%;z-index:3;text-align:center;font-family:'Bungee';font-size:clamp(28px,8vw,58px);pointer-events:none;opacity:0;transition:opacity .25s;}
+/* on-screen controls (touch devices) */
+#sfPads{display:none;position:relative;z-index:2;padding:8px 12px calc(10px + env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;}
+@media (pointer:coarse){ #sfPads{display:flex;justify-content:space-between;gap:10px;} }
+.padL{display:flex;gap:10px;align-items:flex-end;}
+.padR{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pbtn{font-family:'Bungee';border:3px solid #00f0ff;color:#00f0ff;background:rgba(0,240,255,.07);
+  border-radius:14px;text-align:center;touch-action:none;-webkit-tap-highlight-color:transparent;}
+.pbtn.on{background:#00f0ff;color:#05071c;box-shadow:0 0 18px rgba(0,240,255,.6);}
+.pmove{width:70px;height:70px;font-size:26px;line-height:64px;}
+.pact{width:74px;height:46px;font-size:12px;line-height:40px;}
+.pact.atk{border-color:#ff2bd6;color:#ff2bd6;background:rgba(255,43,214,.07);}
+.pact.atk.on{background:#ff2bd6;color:#05071c;box-shadow:0 0 18px rgba(255,43,214,.6);}
+.pact.gold{border-color:#ffd60a;color:#ffd60a;background:rgba(255,214,10,.07);}
+.pact.gold.on{background:#ffd60a;color:#05071c;box-shadow:0 0 18px rgba(255,214,10,.6);}
+#sfMenu{position:fixed;inset:0;z-index:4;background:rgba(5,7,28,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:18px;overflow-y:auto;}
+#sfTitle{font-family:'Bungee';font-size:clamp(30px,8vw,58px);color:#eafaff;text-shadow:4px 4px 0 #ff2bd6;}
+#sfSub{color:#7fa8c9;font-size:14px;max-width:520px;}
+.sf-opts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.sf-opt{font-family:'Bungee';font-size:14px;color:#00f0ff;border:3px solid #00f0ff;background:rgba(0,240,255,.06);padding:10px 18px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.sf-opt.sel{background:#00f0ff;color:#05071c;box-shadow:0 0 22px rgba(0,240,255,.6);}
+#sfFight{font-family:'Bungee';font-size:19px;color:#05071c;background:#ffd60a;border:none;padding:15px 40px;cursor:pointer;transform:rotate(-1.5deg);box-shadow:5px 5px 0 #ff2bd6;}
+#sfFight:hover{transform:rotate(0deg) scale(1.04);}
+.sf-help{font-size:11.5px;color:#7fa8c9;max-width:560px;line-height:1.7;}
+.sf-help b{color:#eafaff;font-weight:600;}
+.sf-demo{font-family:'Bungee';font-size:10px;background:#ffd60a;color:#05071c;padding:4px 10px;transform:rotate(-2deg);box-shadow:3px 3px 0 #ff2bd6;}
+@media (pointer:coarse){ .sf-help .kbd{display:none;} }
+</style>
+</head>
+<body>
+<div class="gridbg"></div>
+<div class="hud">
+  <div class="bars you"><div class="tag">YOU</div><div class="hp"><div id="sfYouHp" style="width:100%"></div></div><div class="sta"><div id="sfYouSta" style="width:100%"></div></div></div>
+  <div class="mid"><div id="sfTimer">60</div></div>
+  <div class="bars foe"><div class="tag">RIVAL</div><div class="hp"><div id="sfFoeHp" style="width:100%"></div></div><div class="sta"><div id="sfFoeSta" style="width:100%"></div></div></div>
+</div>
+<canvas id="sfCanvas"></canvas>
+<div id="sfPads">
+  <div class="padL">
+    <div class="pbtn pmove" id="padB">◀</div>
+    <div class="pbtn pmove" id="padF">▶</div>
+  </div>
+  <div class="padR">
+    <div class="pbtn pact atk" id="btnHigh">HIGH</div>
+    <div class="pbtn pact atk" id="btnLow">LOW</div>
+    <div class="pbtn pact" id="btnJump">JUMP</div>
+    <div class="pbtn pact" id="btnCrouch">CROUCH</div>
+    <div class="pbtn pact gold" id="btnBlock">BLOCK</div>
+    <div class="pbtn pact gold" id="btnDodge">DODGE</div>
+    <div class="pbtn pact atk" id="btnCharge">⚡ CHARGE</div>
+    <div class="pbtn pact atk" id="btnThrow">SMASH</div>
+  </div>
+</div>
+<div id="sfBanner"></div>
+<div id="sfMenu">
+  <a href="index.html" style="position:fixed;top:12px;left:14px;z-index:5;font-family:'Bungee';font-size:12px;color:#7fa8c9;text-decoration:none;border:2px solid rgba(127,168,201,.4);padding:6px 12px;">← SKILLGAMEZ</a>
+  <span class="sf-demo">DEMO · VS AI · FAKE STAKES</span>
+  <div id="sfTitle">STICKMAN FIGHT</div>
+  <div id="sfSub">Read your opponent. Strike first. One round, 60 seconds, KO or best HP wins.</div>
+  <div class="sf-opts" id="sfTiers"></div>
+  <button id="sfFight">FIGHT</button>
+  <div class="sf-help">
+    <b>Buttons:</b> hold ◀ ▶ to move left/right — always screen-direction, even after you jump over your rival (works mid-air) · HIGH beats standing · LOW beats crouchers but is slower ·
+    CROUCH ducks highs (and you can throw LOW pokes without standing up) · JUMP sails over lows · hold BLOCK to absorb · crouch+block (any order) = <b>low guard</b>: highs whiff over you ·
+    hold <b>⚡ CHARGE</b> and release: huge damage, smashes through low guard — but miss it and you are stunned a full second ·
+    <b>SMASH</b>: overhead bat — crushes straight through a standing block and catches jumpers (low guard slips under it; strikes beat its windup) · DODGE backsteps ·
+    jump <b>over</b> your opponent to switch sides — but airborne you can be hit by highs and bats<br>
+    <span class="kbd"><b>Keys:</b> A/D or ←→ move · W/↑ jump · S/↓ crouch (hold) · J high · K low · U smash · Space block (hold) · I charge (hold) · L dodge<br></span>
+    Stamina runs everything — swing wild or hide in block and you will be <b>EXHAUSTED</b>: 1 second stunned, free punish, 40 damage.
+  </div>
+</div>
+<script>
+/* ============================================================
+   STICKMAN FIGHT — combat core (pure, deterministic, tick-based)
+   Designed for reuse: no DOM, no rendering, no timers, no RNG.
+   The real game runs this exact module server-side at 10 ticks/s;
+   clients send actions, server calls step(), clients render state.
+   ============================================================ */
+(function (root) {
+'use strict';
+
+var CFG = {
+  TICK_MS: 100,
+  ROUND_TICKS: 600,          // single 60s round
+  ARENA: 100,                // 1D axis, units
+  START_A: 35, START_B: 65,  // mid-range start (gap 30)
+  MIN_GAP: 6,                // fighters can't overlap closer than this
+  STEP: 5,                   // units per movement tick (hold to walk) — 1.25x
+  AIR_DRIFT: 3.75,           // air control while jumping (locked direction, crosses over)
+  RANGE: 9,                  // attack reach (tight — contact must be felt)
+  LUNGE: 3,                  // attacker lunges forward on the active frame
+  HP: 100, STA: 100,
+  AH: { startup: 2, active: 1, recovery: 1, dmg: 25, cost: 12 },  // high: fast (1.25x)
+  AL: { startup: 3, active: 1, recovery: 2, dmg: 20, cost: 9 },  // low: deliberately slow — its speed IS the balance
+  PUSHBACK: 5,               // landed hit knocks defender back
+  PUNISH_DMG: 40,            // unblocked hit on exhausted
+  JUMP_TICKS: 5,             // airborne: avoids low (1.25x, higher arc)
+  CROUCH_TICKS: 4,           // avoids high (1.25x)
+  BLOCK_MAX: 12,             // auto-release (1.25x)
+  BLOCK_COST: 8,             // on press — guarding is a stance, not a burn
+  DODGE_COST: 15, DODGE_STEP: 9, DODGE_IFRAMES: 2, DODGE_TICKS: 3, DODGE_CD: 4,
+  WHIFF_COST: 12,
+  BLOCKED_ATK_COST: 10,      // attacking into a block is a failed attack
+  BLOCK_ABSORB_COST: 8,      // absorbing a hit drains the blocker a little
+  STAGGER_TICKS: 3,          // extra recovery after whiffed/blocked attack
+  AC: { startup: 2, active: 1, recovery: 3, dmgBase: 30, cost: 18, cancelCost: 4,
+        minCharge: 3, maxCharge: 12, absorb: 16, selfStun: 10, push: 8 }, // charged bat swing: release->impact fixed 300ms
+  THROW: { startup: 2, active: 1, recovery: 2, dmg: 16, cost: 8, range: 7, push: 10 }, // grabs through standing block
+  STUN_TICKS: 10,            // exhausted: 1s of free-hit
+  HITSTUN_TICKS: 3,
+  REGEN: 1                   // per tick, only while idle
+};
+
+// actions incl. charge: hold CHARGE, release CHARGE_REL; UNCROUCH lifts low guard
+var ACTIONS = ['F','B','JUMP','CROUCH','UNCROUCH','BLOCK','RELEASE','DODGE','AH','AL','CHARGE','CHARGE_REL','THROW'];
+
+function fighter(x, face) {
+  return { pos: x, face: face, hp: CFG.HP, sta: CFG.STA,
+           state: 'idle', t: 0, dodgeCd: 0, low: false, charged: 0, // low = crouching guard
+           // last-tick event flags for renderer/AI (cleared each tick)
+           ev: {} };
+}
+
+function createMatch() {
+  return { a: fighter(CFG.START_A, 1), b: fighter(CFG.START_B, -1),
+           tick: 0, over: false, winner: null, log: [] };
+}
+
+function busy(f) { return f.state !== 'idle' && f.state !== 'crouch'; }
+function canAct(f) { return f.state === 'idle'; }
+function exhausted(f) { return f.state === 'stun'; }
+
+function spendSta(f, cost) {
+  f.sta -= cost;
+  if (f.sta <= 0) { f.sta = 0; f.state = 'stun'; f.t = CFG.STUN_TICKS; f.ev.exhausted = true; }
+}
+
+function applyAction(f, foePosSnapshot, act) {
+  if (!act) return;
+  if (act === 'RELEASE') { if (f.state === 'block') { f.state = 'idle'; f.t = 0; f.low = false; } return; }
+  var toFoe = foePosSnapshot > f.pos ? 1 : -1;
+  // movement is ABSOLUTE: F = screen-right, B = screen-left, ground and air.
+  // Side switches never flip anyone's controls.
+  if (act === 'F' || act === 'B') {
+    if (f.state === 'idle' || f.state === 'jump') {
+      var sp = f.state === 'jump' ? CFG.AIR_DRIFT : CFG.STEP;
+      f.pos += (act === 'F' ? 1 : -1) * sp;
+      f.ev.stepped = act === 'F' ? 1 : -1;
+    }
+    return;
+  }
+  // crouch: enter from idle, refresh while crouched (hold to stay down);
+  // while blocking, converts the guard to a low guard (order-independent crouch-block)
+  if (act === 'CROUCH') {
+    if (f.state === 'idle' || f.state === 'crouch') { f.state = 'crouch'; f.t = CFG.CROUCH_TICKS; }
+    else if (f.state === 'block') f.low = true;
+    return;
+  }
+  if (act === 'UNCROUCH') { if (f.state === 'block') f.low = false; return; }
+  // charge attack: hold to wind up, release to unleash
+  if (act === 'CHARGE') {
+    if (f.state === 'idle' || f.state === 'crouch') { f.state = 'charge'; f.t = CFG.AC.maxCharge; f.charged = 0; }
+    return;
+  }
+  if (act === 'CHARGE_REL') {
+    if (f.state !== 'charge') return;
+    var charged = CFG.AC.maxCharge - f.t;
+    if (charged < CFG.AC.minCharge) { f.state = 'idle'; f.t = 0; spendSta(f, CFG.AC.cancelCost); return; }
+    f.charged = charged;
+    f.state = 'atkC'; f.t = CFG.AC.startup + CFG.AC.active + CFG.AC.recovery;
+    spendSta(f, CFG.AC.cost);
+    return;
+  }
+  // block: from standing or crouching — crouch-block keeps the low profile
+  if (act === 'BLOCK') {
+    if (f.state === 'idle' || f.state === 'crouch') {
+      f.low = f.state === 'crouch';
+      f.state = 'block'; f.t = CFG.BLOCK_MAX;
+      spendSta(f, CFG.BLOCK_COST);
+    }
+    return;
+  }
+  // jump: from standing or crouching (spring up)
+  if (act === 'JUMP') {
+    if (f.state === 'idle' || f.state === 'crouch') { f.state = 'jump'; f.t = CFG.JUMP_TICKS; }
+    return;
+  }
+  // crouch-poke: the low strike can be thrown straight from a crouch
+  if (act === 'AL' && (f.state === 'idle' || f.state === 'crouch')) {
+    f.state = 'atkL'; f.t = CFG.AL.startup + CFG.AL.active + CFG.AL.recovery;
+    spendSta(f, CFG.AL.cost);
+    return;
+  }
+  if (!canAct(f)) return;
+  switch (act) {
+    case 'DODGE':
+      if (f.dodgeCd > 0) return;
+      f.state = 'dodge'; f.t = CFG.DODGE_TICKS; f.dodgeCd = CFG.DODGE_TICKS + CFG.DODGE_CD;
+      f.pos -= CFG.DODGE_STEP * toFoe;
+      spendSta(f, CFG.DODGE_COST);
+      break;
+    case 'AH':
+      f.state = 'atkH'; f.t = CFG.AH.startup + CFG.AH.active + CFG.AH.recovery;
+      spendSta(f, CFG.AH.cost);
+      break;
+    case 'THROW':
+      f.state = 'throw'; f.t = CFG.THROW.startup + CFG.THROW.active + CFG.THROW.recovery;
+      spendSta(f, CFG.THROW.cost);
+      break;
+  }
+}
+
+function stagger(f, spec) {
+  if (f.state === 'stun') return; // exhaustion overrides
+  f.state = 'stagger'; f.t = spec.recovery + CFG.STAGGER_TICKS;
+  f.ev.staggered = true;
+}
+
+/* defSnap = defender state captured after both fighters advanced, before any
+   resolution this tick — guarantees A/B symmetry and honest trades */
+/* charge attack: heavy overhead. Pierces crouch and crouch-block (anti-abuse),
+   standing block absorbs it at heavy cost, jump/dodge/range = whiff and the
+   attacker is STUNNED for a full second. */
+function resolveCharge(m, atk, def, defSnap) {
+  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * CFG.LUNGE;
+  var dist = Math.abs(atk.pos - defSnap.pos);
+  var dmg = 0, hit = false, why = '';
+  var miss = dist > CFG.RANGE ||
+    (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES);
+  if (miss) {
+    why = dist > CFG.RANGE ? 'range' : 'dodged';
+    atk.state = 'stun'; atk.t = CFG.AC.selfStun; atk.charged = 0; // overcommitted
+    atk.ev.whiffed = true; atk.ev.exhausted = true;
+  } else if (defSnap.state === 'block' && !defSnap.low) {
+    why = 'blocked'; def.ev.blocked = true;
+    spendSta(def, CFG.AC.absorb);
+    stagger(atk, CFG.AC);
+  } else {
+    hit = true;
+    dmg = defSnap.state === 'stun' ? CFG.PUNISH_DMG + 10 : CFG.dmgOfCharge(atk.charged);
+    if (defSnap.state === 'block' && defSnap.low) { def.ev.pierced = true; def.low = false; }
+    def.hp -= dmg;
+    if (defSnap.state !== 'stun') { def.state = 'hit'; def.t = CFG.HITSTUN_TICKS + 1; }
+    def.pos += (def.pos >= atk.pos ? 1 : -1) * CFG.AC.push;
+    def.ev.hit = dmg;
+    atk.ev.landed = dmg;
+  }
+  atk.charged = 0;
+  m.log.push({ t: m.tick, kind: 'C', hit: hit, dmg: dmg, why: why });
+}
+CFG.dmgOfCharge = function (charged) { return CFG.AC.dmgBase + charged; }; // 33..42
+
+/* throw: grabs through STANDING block; crouch-block slips it (immune);
+   jump/dodge evade; a defender mid-strike beats the throw. */
+function resolveThrow(m, atk, def, defSnap) {
+  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * 2; // short step-in
+  var dist = Math.abs(atk.pos - defSnap.pos);
+  var hit = false, dmg = 0, why = '';
+  if (dist > CFG.THROW.range) why = 'range';
+  else if (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES) why = 'dodged';
+  else if (defSnap.state === 'block' && defSnap.low) { why = 'slipped'; def.ev.slipped = true; } // crouch-block slips under the arc
+  else if (defSnap.state === 'atkH' || defSnap.state === 'atkL' || defSnap.state === 'atkC') why = 'struck'; // strikes beat throws
+  else {
+    hit = true;
+    dmg = CFG.THROW.dmg;
+    def.hp -= dmg;
+    if (defSnap.state !== 'stun') { def.state = 'hit'; def.t = CFG.HITSTUN_TICKS + 1; }
+    def.low = false;
+    def.pos += (def.pos >= atk.pos ? 1 : -1) * CFG.THROW.push;
+    def.ev.hit = dmg; def.ev.thrown = true;
+    atk.ev.landed = dmg;
+  }
+  if (!hit) { spendSta(atk, CFG.WHIFF_COST); atk.ev.whiffed = true; if (why !== 'range') stagger(atk, CFG.THROW); }
+  m.log.push({ t: m.tick, kind: 'T', hit: hit, dmg: dmg, why: why });
+}
+
+function resolveAttack(m, atk, def, kind, defSnap) {
+  if (kind === 'C') return resolveCharge(m, atk, def, defSnap);
+  if (kind === 'T') return resolveThrow(m, atk, def, defSnap);
+  var spec = kind === 'H' ? CFG.AH : CFG.AL;
+  // lunge: attacker commits forward on the active frame — hits read as contact
+  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * CFG.LUNGE;
+  var dist = Math.abs(atk.pos - defSnap.pos);
+  var hit = false, dmg = 0, why = '';
+  if (dist > CFG.RANGE) { why = 'range'; }
+  else if (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES) { why = 'dodged'; }
+  else if (defSnap.state === 'crouch' && kind === 'H') { why = 'crouched'; }
+  else if (defSnap.state === 'block' && defSnap.low && kind === 'H') { why = 'crouched'; }
+  else if (defSnap.state === 'jump' && kind === 'L') { why = 'jumped'; }
+  else if (defSnap.state === 'block') {
+    why = 'blocked'; def.ev.blocked = true;
+    spendSta(def, CFG.BLOCK_ABSORB_COST);          // guard damage
+    spendSta(atk, CFG.BLOCKED_ATK_COST);           // failed attack
+    stagger(atk, spec); // punishable — dedicated state, cannot re-fire
+  }
+  else {
+    hit = true;
+    dmg = defSnap.state === 'stun' ? CFG.PUNISH_DMG : spec.dmg;
+    // counter-hit: interrupted during attack startup = ate a read, +50%
+    var ch = (defSnap.state === 'atkH' && defSnap.t > CFG.AH.recovery + CFG.AH.active) ||
+             (defSnap.state === 'atkL' && defSnap.t > CFG.AL.recovery + CFG.AL.active) ||
+             defSnap.state === 'charge' ||
+             (defSnap.state === 'throw' && defSnap.t > CFG.THROW.recovery + CFG.THROW.active);
+    if (ch && defSnap.state !== 'stun') { dmg = Math.round(dmg * 1.5); def.ev.counterHit = true; }
+    def.hp -= dmg;
+    if (defSnap.state !== 'stun') { def.state = 'hit'; def.t = CFG.HITSTUN_TICKS; }
+    def.pos += (def.pos >= atk.pos ? 1 : -1) * CFG.PUSHBACK; // knockback
+    def.ev.hit = dmg;
+    atk.ev.landed = dmg;
+  }
+  if (!hit && why !== 'blocked') {
+    spendSta(atk, CFG.WHIFF_COST); atk.ev.whiffed = true;
+    if (why !== 'range') stagger(atk, spec); // ate a read = punishable stagger
+  }
+  m.log.push({ t: m.tick, kind: kind, hit: hit, dmg: dmg, why: why });
+}
+
+function advance(m, f) {
+  f.ev = {};
+  if (f.state !== 'block') f.low = false;
+  if (f.dodgeCd > 0) f.dodgeCd--;
+  if (f.state === 'idle') { f.sta = Math.min(CFG.STA, f.sta + CFG.REGEN); return null; }
+  f.t--;
+  var fire = null;
+  // attack active-frame check happens exactly once, when t hits recovery count
+  if (f.state === 'atkH' && f.t === CFG.AH.recovery) fire = 'H';
+  if (f.state === 'atkL' && f.t === CFG.AL.recovery) fire = 'L';
+  if (f.state === 'atkC' && f.t === CFG.AC.recovery) fire = 'C';
+  if (f.state === 'throw' && f.t === CFG.THROW.recovery) fire = 'T';
+  if (f.state === 'charge' && f.t <= 0) { // held to the cap: auto-release
+    f.charged = CFG.AC.maxCharge;
+    f.state = 'atkC'; f.t = CFG.AC.startup + CFG.AC.active + CFG.AC.recovery;
+    spendSta(f, CFG.AC.cost);
+    return null;
+  }
+  if (f.t <= 0) { f.state = 'idle'; f.t = 0; }
+  return fire;
+}
+
+function clampPositions(m) {
+  var a = m.a, b = m.b;
+  a.pos = Math.max(3, Math.min(CFG.ARENA - 3, a.pos));
+  b.pos = Math.max(3, Math.min(CFG.ARENA - 3, b.pos));
+  if (a.state === 'jump' || b.state === 'jump') return; // airborne: free to cross over
+  if (Math.abs(a.pos - b.pos) < CFG.MIN_GAP) {
+    var mid = (a.pos + b.pos) / 2, s = a.pos < b.pos ? 1 : -1;
+    a.pos = mid - (CFG.MIN_GAP / 2) * s;
+    b.pos = mid + (CFG.MIN_GAP / 2) * s;
+  }
+}
+
+/* one server tick: apply both players' actions, advance states, resolve */
+function step(m, actA, actB) {
+  if (m.over) return m;
+  m.tick++;
+  var fireA = advance(m, m.a);
+  var fireB = advance(m, m.b);
+  // simultaneous attack resolution against post-advance snapshots
+  var snapA = { state: m.a.state, t: m.a.t, pos: m.a.pos, low: m.a.low };
+  var snapB = { state: m.b.state, t: m.b.t, pos: m.b.pos, low: m.b.low };
+  if (fireA) resolveAttack(m, m.a, m.b, fireA, snapB);
+  if (fireB) resolveAttack(m, m.b, m.a, fireB, snapA);
+  var posA = m.a.pos, posB = m.b.pos; // snapshot: simultaneous action application
+  applyAction(m.a, posB, actA);
+  applyAction(m.b, posA, actB);
+  clampPositions(m);
+  if (m.a.pos !== m.b.pos) { m.a.face = m.a.pos < m.b.pos ? 1 : -1; m.b.face = -m.a.face; }
+  if (m.a.hp <= 0 || m.b.hp <= 0) {
+    m.over = true;
+    m.winner = m.a.hp <= 0 && m.b.hp <= 0 ? 'draw' : (m.a.hp <= 0 ? 'b' : 'a');
+  } else if (m.tick >= CFG.ROUND_TICKS) {
+    m.over = true;
+    m.winner = m.a.hp === m.b.hp ? 'draw' : (m.a.hp > m.b.hp ? 'a' : 'b');
+  }
+  return m;
+}
+
+var api = { CFG: CFG, ACTIONS: ACTIONS, createMatch: createMatch, step: step };
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+else root.StickmanCore = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* Stickman AI controller — demo/prototype side (never ships to server).
+   Prediction-based per spec: reads are guesses in a 100ms window, not reactions.
+   Tiers reuse the platform's reaction ranges as decision latency. */
+(function (root) {
+'use strict';
+var core = (typeof require !== 'undefined') ? require('./stickman-core.js') : root.StickmanCore;
+var CFG = core.CFG;
+
+var TIERS = {
+  easy:   { latLo: 6, latHi: 8, read: 0.30, aggr: 0.20, punish: 0.35, adapt: 0.015 },
+  medium: { latLo: 4, latHi: 6, read: 0.45, aggr: 0.24, punish: 0.55, adapt: 0.035 },
+  hard:   { latLo: 3, latHi: 4, read: 0.62, aggr: 0.26, punish: 0.78, adapt: 0.060 },
+  ultra:  { latLo: 2, latHi: 3, read: 0.80, aggr: 0.28, punish: 0.92, adapt: 0.085 }
+};
+
+function makeAI(tier, rng) {
+  return { p: TIERS[tier], rng: rng || Math.random, wait: 0, plan: null,
+           heat: 0, foeWasAttacking: false }; // heat = perceived attack spam
+}
+
+/* decide an action for fighter `me` vs `foe` this tick */
+function aiAct(ai, me, foe) {
+  var P = ai.p, R = ai.rng;
+  // adaptive pattern-reading: repetition raises effective read chance
+  var foeAttacking = foe.state === 'atkH' || foe.state === 'atkL';
+  if (foeAttacking && !ai.foeWasAttacking) ai.heat = Math.min(8, ai.heat + 1.6);
+  else if (!foeAttacking) ai.heat = Math.max(0, ai.heat - 0.06);
+  ai.foeWasAttacking = foeAttacking;
+  var effRead = Math.min(0.95, P.read + ai.heat * P.adapt);
+  var justRecovered = me.state === 'idle' && ai.meWasHit;
+  ai.meWasHit = me.state === 'hit';
+  // mid-charge: release once past minimum (sooner if the target is escaping)
+  if (me.state === 'charge') {
+    var charged = CFG.AC.maxCharge - me.t;
+    var foeEscaping = foe.state === 'jump' || foe.state === 'dodge';
+    if (foeEscaping && charged >= CFG.AC.minCharge) return null; // hold, let them land
+    if (charged >= CFG.AC.minCharge + 2 + ((R() * 4) | 0)) return 'CHARGE_REL';
+    return null;
+  }
+  if (me.state !== 'idle' && me.state !== 'crouch') return null;
+  var dist = Math.abs(me.pos - foe.pos);
+  var inRange = dist <= CFG.RANGE;
+  var FWD = me.pos < foe.pos ? 'F' : 'B', BCK = me.pos < foe.pos ? 'B' : 'F';
+  // just out of hitstun under pressure: act NOW — space out or guard, don't stand there
+  if (justRecovered && ai.heat > 2) {
+    ai.wait = 0;
+    var rr = R();
+    if (rr < 0.35) return BCK;
+    if (rr < 0.60 && me.sta > 25) return 'BLOCK';
+    return 'CROUCH';
+  }
+
+  // foe winding up a charge: big telegraph — interrupt it, evade it, or leave
+  if (foe.state === 'charge' && R() < Math.min(0.95, effRead + 0.15)) {
+    ai.wait = 0;
+    if (inRange) {
+      var rc = R();
+      if (rc < 0.5) return 'AH';           // interrupt = counter-hit
+      if (rc < 0.7 && me.dodgeCd === 0 && me.sta > 25) return 'DODGE';
+      return me.sta > 30 ? 'BLOCK' : BCK;  // standing block absorbs the bat
+    }
+    return BCK;
+  }
+
+  // REACTIVE layer — bypasses planning latency, like a human abort
+  var AHar = CFG.AH.recovery + CFG.AH.active, ALar = CFG.AL.recovery + CFG.AL.active;
+  var foeRecovering = foe.state === 'stagger' || (foe.state === 'atkH' && foe.t <= AHar + 2) || (foe.state === 'atkL' && foe.t <= ALar + 2);
+  if ((foe.state === 'stun' || foe.state === 'hit' || foeRecovering) && me.sta > 15 && R() < P.punish) {
+    ai.wait = 0;
+    if (inRange) {
+      if (foe.state === 'stun' && foe.t >= 7 && me.sta > CFG.AC.cost + 10 && R() < 0.6) return 'CHARGE';
+      return R() < 0.5 ? 'AH' : 'AL';
+    }
+    return FWD;
+  }
+  var foeStartup = (foe.state === 'atkH' && foe.t > AHar) || (foe.state === 'atkL' && foe.t > ALar);
+  if (foeStartup && inRange && R() < effRead) {
+    ai.wait = 0;
+    if (foe.state === 'atkH') return R() < 0.6 ? 'CROUCH' : 'BLOCK';
+    return R() < 0.5 ? 'JUMP' : (me.sta > 30 ? 'BLOCK' : BCK);
+  }
+  if (foe.state === 'throw' && foe.t > 3 && inRange && R() < effRead) {
+    ai.wait = 0;
+    var rt = R();
+    if (rt < 0.45) return 'AH';   // strike beats the smash windup
+    if (rt < 0.7 && me.dodgeCd === 0 && me.sta > 25) return 'DODGE';
+    if (me.state === 'block' && !me.low) return 'CROUCH'; // sink into low guard — slips the smash
+    return me.state === 'crouch' ? 'BLOCK' : BCK;
+  }
+
+  // PLANNING layer — latency-gated
+  if (ai.wait > 0) { ai.wait--; return null; }
+  // low stamina: disengage and breathe
+  if (me.sta < 22) { ai.wait = 2 + ((R() * 3) | 0); return R() < 0.6 ? BCK : null; }
+
+  if (!inRange) {
+    if (R() < 0.75) { ai.wait = ((R() * (P.latHi - P.latLo)) + P.latLo - 2) | 0; return FWD; }
+    return null;
+  }
+  // in range: mixed strategy, latency-gated
+  // vs spammers (high heat): stop offering trades — defend and punish only
+  var effAggr = P.aggr * Math.max(0.15, 1 - ai.heat / 9);
+  var r = R();
+  ai.wait = (P.latLo + R() * (P.latHi - P.latLo)) | 0;
+  if (foe.state === 'block' && foe.low && me.sta > CFG.AC.cost + 8 && R() < 0.55) return 'CHARGE'; // break the turtle
+  if (foe.state === 'block' && !foe.low && R() < 0.5) return 'THROW'; // grab the standing guard
+  if (r < effAggr) {
+    if (me.state === 'crouch') return 'AL'; // crouch-poke
+    var rs = R(); return rs < 0.45 ? 'AH' : rs < 0.8 ? 'AL' : 'THROW'; // strike/grab mixup
+  }
+  if (r < effAggr + 0.08) return 'CROUCH';                    // bait the high
+  if (r < effAggr + 0.13) return me.sta > 35 ? 'BLOCK' : BCK; // guard
+  if (r < effAggr + 0.17) return 'JUMP';                      // avoid lows
+  if (r < effAggr + 0.22) return me.dodgeCd === 0 && me.sta > 30 ? 'DODGE' : BCK;
+  if (r < effAggr + 0.30) return R() < 0.5 ? FWD : BCK;       // footsies
+  return null;
+}
+
+/* degenerate bots for balance validation */
+function lowTurtleAct(me, foe) { // crouch-blocks forever
+  if (me.state === 'idle') return 'CROUCH';
+  if (me.state === 'crouch') return 'BLOCK';
+  if (me.state === 'block' && !me.low) return 'CROUCH';
+  return null;
+}
+function turtleAct(me, foe) { // blocks everything, never attacks
+  if (me.state !== 'idle') return null;
+  if (foe.state === 'atkH' || foe.state === 'atkL') return 'BLOCK';
+  return null;
+}
+function masherAct(me, foe) { // attacks every possible tick
+  if (me.state !== 'idle') return null;
+  var dist = Math.abs(me.pos - foe.pos);
+  if (dist > CFG.RANGE) return me.pos < foe.pos ? 'F' : 'B';
+  return Math.random() < 0.5 ? 'AH' : 'AL';
+}
+
+var api = { TIERS: TIERS, makeAI: makeAI, aiAct: aiAct, turtleAct: turtleAct, masherAct: masherAct, lowTurtleAct: lowTurtleAct };
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+else root.StickmanAI = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* STICKMAN FIGHT — prototype shell v2: renderer + inputs + flow.
+   Demo-side only. All game state comes from StickmanCore.step().
+   v2: fixed interpolation clock (no ghosting), 2x fighters, hit-pause,
+   single 60s round, held movement + air control, input buffer,
+   on-screen mobile controls. */
+(function () {
+'use strict';
+var core = window.StickmanCore, AI = window.StickmanAI, CFG = core.CFG;
+
+var COL = { you: '#00f0ff', foe: '#ff2bd6', gold: '#ffd60a', dim: '#7fa8c9' };
+var S = {
+  screen: 'menu', tier: 'medium',
+  m: null, ai: null,
+  buf: null,                       // {act, exp} — one buffered action, 3-tick life
+  held: { f: false, b: false, crouch: false, block: false, charge: false },
+  lastTickAt: 0, hitPauseUntil: 0,
+  effects: [], shake: 0,
+  simTimer: null, raf: null, bannerT: 0
+};
+window.__sf = S;
+
+var cv, ctx, hudYouHp, hudFoeHp, hudYouSta, hudFoeSta, hudTimer, menuEl, bannerEl;
+
+/* ================= flow ================= */
+function startMatch(tier) {
+  S.tier = tier;
+  S.m = core.createMatch();
+  S.ai = AI.makeAI(tier);
+  S.buf = null; S.effects = []; S.shake = 0;
+  S.held = { f: false, b: false, crouch: false, block: false, charge: false };
+  S.prevA = S.m.a.pos; S.prevB = S.m.b.pos;
+  S.screen = 'fight';
+  showMenu(false);
+  banner('FIGHT!', COL.gold, 900);
+  S.lastTickAt = performance.now();
+  clearInterval(S.simTimer);
+  S.simTimer = setInterval(tick, CFG.TICK_MS);
+  updateHud();
+}
+window.__sfStart = startMatch;
+
+/* which actions can the player's fighter accept right now (mirrors core rules) */
+function eligible(act) {
+  var st = S.m.a.state;
+  if (act === 'F' || act === 'B') return st === 'idle' || st === 'jump';
+  if (act === 'CROUCH') return st === 'idle' || st === 'crouch';
+  if (act === 'JUMP') return st === 'idle' || st === 'crouch';
+  if (act === 'BLOCK') return st === 'idle' || st === 'crouch';
+  if (act === 'CHARGE') return st === 'idle' || st === 'crouch';
+  if (act === 'CHARGE_REL' || act === 'UNCROUCH') return true;
+  if (act === 'RELEASE') return true;
+  return st === 'idle';
+}
+
+function playerAction() {
+  // buffered discrete action wins if usable
+  if (S.buf) {
+    if (eligible(S.buf.act)) { var a = S.buf.act; S.buf = null; return a; }
+    if (--S.buf.exp <= 0) S.buf = null;
+  }
+  var st = S.m.a.state;
+  // charge: hold to wind up, release fires
+  if (S.held.charge) { if (st === 'idle' || st === 'crouch') return 'CHARGE'; }
+  else if (st === 'charge') return 'CHARGE_REL';
+  // block stance — crouch+block in ANY order = seated low guard, converts live
+  if (S.held.block) {
+    if (st === 'block') {
+      if (S.held.crouch && !S.m.a.low) return 'CROUCH';    // sink into low guard
+      if (!S.held.crouch && S.m.a.low) return 'UNCROUCH';  // rise to standing guard
+    } else if (eligible('BLOCK')) {
+      return 'BLOCK'; // enters low guard automatically if pressed while crouched
+    } else if (S.held.crouch && st === 'idle') return 'CROUCH';
+  }
+  if (!S.held.block && st === 'block') return 'RELEASE';
+  if (S.held.crouch && eligible('CROUCH')) return 'CROUCH';
+  // held movement (works standing and airborne)
+  if (S.held.f && !S.held.b && eligible('F')) return 'F';
+  if (S.held.b && !S.held.f && eligible('B')) return 'B';
+  return null;
+}
+
+function queueAction(act) {
+  if (S.screen !== 'fight') return;
+  // no attack queuing while already attacking — one press, one move
+  var atking = S.m.a.state === 'atkH' || S.m.a.state === 'atkL' || S.m.a.state === 'throw';
+  if ((act === 'AH' || act === 'AL' || act === 'THROW') && atking) return;
+  S.buf = { act: act, exp: 5 };
+}
+window.__sfQueue = queueAction;
+
+function tick() {
+  if (S.screen !== 'fight') return;
+  S.prevA = S.m.a.pos; S.prevB = S.m.b.pos;
+  var act = playerAction();
+  var aiAction = AI.aiAct(S.ai, S.m.b, S.m.a);
+  core.step(S.m, act, aiAction);
+  S.lastTickAt = performance.now();
+  collectFx(S.m.a, 'a'); collectFx(S.m.b, 'b');
+  updateHud();
+  if (S.m.over) {
+    clearInterval(S.simTimer);
+    S.screen = 'end';
+    var w = S.m.winner;
+    var youWon = w === 'a', tie = w === 'draw';
+    setTimeout(function () {
+      showMenu(true, tie ? 'DRAW' : youWon ? 'YOU WIN' : 'YOU LOSE',
+        tie ? COL.gold : youWon ? COL.you : COL.foe,
+        'HP ' + Math.max(0, S.m.a.hp) + ' – ' + Math.max(0, S.m.b.hp) + ' vs ' + S.tier.toUpperCase() + ' AI');
+    }, 900);
+  }
+}
+
+/* ================= effects ================= */
+function collectFx(f, who) {
+  if (!f.ev) return;
+  if (f.ev.hit) {
+    S.effects.push({ kind: 'dmg', who: who, val: f.ev.hit, ch: !!f.ev.counterHit, t: 0 });
+    S.effects.push({ kind: 'spark', x: f.pos, t: 0 });
+    S.shake = f.ev.hit >= CFG.PUNISH_DMG ? 16 : 9;
+    S.hitPauseUntil = performance.now() + (f.ev.hit >= CFG.PUNISH_DMG ? 130 : 80);
+  }
+  if (f.ev.blocked) S.effects.push({ kind: 'txt', who: who, txt: 'BLOCKED', col: COL.gold, t: 0 });
+  if (f.ev.pierced) S.effects.push({ kind: 'txt', who: who, txt: 'GUARD BREAK!', col: '#ff5470', t: 0 });
+  if (f.ev.thrown) S.effects.push({ kind: 'txt', who: who, txt: 'SMASHED!', col: '#ff9d00', t: 0 });
+  if (f.ev.slipped) S.effects.push({ kind: 'txt', who: who, txt: 'SLIPPED IT', col: COL.you, t: 0 });
+  if (f.ev.exhausted) S.effects.push({ kind: 'txt', who: who, txt: 'EXHAUSTED!', col: '#ff5470', t: 0 });
+}
+function banner(txt, col, ms) {
+  if (!bannerEl) return;
+  bannerEl.textContent = txt; bannerEl.style.color = col;
+  bannerEl.style.textShadow = '0 0 30px ' + col;
+  bannerEl.style.opacity = 1;
+  clearTimeout(S.bannerT);
+  S.bannerT = setTimeout(function () { bannerEl.style.opacity = 0; }, ms);
+}
+
+/* ================= HUD ================= */
+function updateHud() {
+  if (!hudYouHp || !S.m) return;
+  hudYouHp.style.width = Math.max(0, S.m.a.hp) + '%';
+  hudFoeHp.style.width = Math.max(0, S.m.b.hp) + '%';
+  hudYouSta.style.width = Math.max(0, S.m.a.sta) + '%';
+  hudFoeSta.style.width = Math.max(0, S.m.b.sta) + '%';
+  hudYouSta.style.background = S.m.a.sta < 25 ? '#ff5470' : COL.you;
+  hudFoeSta.style.background = S.m.b.sta < 25 ? '#ff5470' : COL.foe;
+  hudTimer.textContent = Math.max(0, Math.ceil((CFG.ROUND_TICKS - S.m.tick) / 10));
+}
+
+/* ================= renderer ================= */
+function px(u, w) { return 30 + (u / CFG.ARENA) * (w - 60); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+var K = 2.0; // fighter scale
+
+function phases(f, tCont) {
+  var p = { crouch: 0, jumpY: 0, arm: 0, armKind: null, guard: 0, stun: 0, hit: 0, dodge: 0, lean: 0 };
+  var st = f.state;
+  if (st === 'crouch') p.crouch = 1;
+  else if (st === 'stagger') { p.lean = -0.4; p.arm = 0.25; p.armKind = 'H'; }
+  else if (st === 'charge') {
+    var chg = clamp01((CFG.AC.maxCharge - tCont) / CFG.AC.maxCharge);
+    p.lean = -0.15; p.chargeGlow = chg; p.chargeAmt = chg;
+    // bat raised overhead, quivering harder as it charges
+    p.bat = { ang: 115 + Math.sin(Date.now() / 60) * (3 + chg * 7), len: 46, trail: 0 };
+  }
+  else if (st === 'throw') { // SMASH: quick overhead bat swing
+    var totT = CFG.THROW.startup + CFG.THROW.active + CFG.THROW.recovery;
+    var elT = clamp01((totT - tCont) / totT) * totT;
+    var su = CFG.THROW.startup, ac = CFG.THROW.active;
+    if (elT < su) p.bat = { ang: 50 + (elT / su) * 120, len: 42, trail: 0 };            // raise behind head
+    else if (elT < su + ac) { p.bat = { ang: -30, len: 42, trail: 1 }; p.lean = 0.35; } // slam down in front
+    else p.bat = { ang: -30 + ((elT - su - ac) / CFG.THROW.recovery) * 80, len: 42, trail: 0 };
+  }
+  else if (st === 'atkC') { // charged mega-slam: fixed 300ms from release to impact
+    var totC = CFG.AC.startup + CFG.AC.active + CFG.AC.recovery;
+    var elC = clamp01((totC - tCont) / totC) * totC;
+    var suC = CFG.AC.startup, acC = CFG.AC.active;
+    if (elC < suC) { p.bat = { ang: 120 + (elC / suC) * 55, len: 54, trail: 0 }; p.lean = -0.1; } // rear back
+    else if (elC < suC + acC) { p.bat = { ang: -35, len: 54, trail: 2 }; p.lean = 0.55; p.heavy = true; } // SLAM
+    else { p.bat = { ang: -35 + ((elC - suC - acC) / CFG.AC.recovery) * 85, len: 54, trail: 0 }; p.lean = 0.2; }
+  }
+  else if (st === 'jump') {
+    var ph = clamp01(1 - tCont / CFG.JUMP_TICKS);
+    p.jumpY = Math.sin(ph * Math.PI) * 150; // clears the opponent's head
+  } else if (st === 'block') { p.guard = 1; if (f.low) p.crouch = 1; }
+  else if (st === 'dodge') { p.dodge = 1; p.lean = -0.5; }
+  else if (st === 'atkH' || st === 'atkL') {
+    var spec = st === 'atkH' ? CFG.AH : CFG.AL;
+    var total = spec.startup + spec.active + spec.recovery;
+    var el = clamp01((total - tCont) / total) * total; // elapsed ticks, continuous
+    p.armKind = st === 'atkH' ? 'H' : 'L';
+    if (el < spec.startup) p.arm = -0.45 * (el / spec.startup);            // windup
+    else if (el < spec.startup + spec.active) p.arm = 1;                    // extended
+    else p.arm = Math.max(0, 1 - (el - spec.startup - spec.active) / spec.recovery); // retract
+    p.lean = p.arm === 1 ? 0.4 : 0.15;
+    if (st === 'atkL') p.crouch = 0.45;
+  } else if (st === 'hit') p.hit = 1;
+  else if (st === 'stun') p.stun = 1;
+  return p;
+}
+
+function drawFighter(w, h, f, prevPos, col, t01, now) {
+  var gy = h - 46;
+  var x = px(lerp(prevPos, f.pos, t01), w);
+  var tCont = Math.max(0, f.t - t01);
+  var p = phases(f, tCont);
+  var face = f.face;
+  var crouchDrop = p.crouch * 26;
+  var y = gy - p.jumpY;
+  var headR = 15;
+  var headY = y - 118 + crouchDrop + (p.stun ? Math.sin(now / 90) * 4 : 0);
+  var hipY = y - 58 + crouchDrop * 0.55;
+  var c = p.hit ? '#ffffff' : col;
+  ctx.strokeStyle = c; ctx.fillStyle = c;
+  ctx.shadowColor = col; ctx.shadowBlur = 18;
+  ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  var leanX = p.lean * 18 * face;
+  if (p.chargeGlow) {
+    ctx.save(); ctx.globalAlpha = 0.25 + p.chargeGlow * 0.4;
+    ctx.fillStyle = COL.gold; ctx.shadowColor = COL.gold; ctx.shadowBlur = 30;
+    ctx.beginPath(); ctx.arc(x, headY + 40, 26 + p.chargeGlow * 22 + Math.sin(now / 70) * 4, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  // head
+  ctx.beginPath(); ctx.arc(x + leanX + face * 4, headY, headR, 0, 7); ctx.stroke();
+  if (p.stun) {
+    ctx.save(); ctx.strokeStyle = COL.gold; ctx.shadowColor = COL.gold; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(x + leanX + face * 4, headY - 26, 20, 7, now / 300, 0, 7); ctx.stroke(); ctx.restore();
+  }
+  // spine
+  var shX = x + leanX, shY = headY + headR + 3;
+  ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(x, hipY); ctx.stroke();
+  // arms
+  ctx.beginPath();
+  if (p.guard) {
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * 18, shY - 6); ctx.lineTo(shX + face * 11, shY - 24);
+    ctx.moveTo(shX, shY + 8); ctx.lineTo(shX + face * 22, shY + 8); ctx.lineTo(shX + face * 16, shY - 13);
+  } else if (p.armKind === 'H') {
+    var e = p.arm;
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (14 + e * 34), shY - 4 - Math.max(0, e) * 10);
+    ctx.moveTo(shX, shY + 8); ctx.lineTo(shX - face * 11, shY + 18);
+  } else if (p.bat) {
+    // both hands gripping toward the bat
+    ctx.moveTo(shX, shY + 2); ctx.lineTo(shX + face * 10, shY - 4);
+    ctx.moveTo(shX, shY + 8); ctx.lineTo(shX + face * 10, shY - 2);
+  } else if (p.armKind === 'L') {
+    var e2 = p.arm;
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (12 + e2 * 36), shY + 26 + Math.max(0, e2) * 18);
+    ctx.moveTo(shX, shY + 8); ctx.lineTo(shX - face * 9, shY + 16);
+  } else {
+    var sway = Math.sin(now / 260) * 3;
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * 16, shY + 14 + sway);
+    ctx.moveTo(shX, shY + 8); ctx.lineTo(shX - face * 8, shY + 16 - sway);
+  }
+  ctx.stroke();
+  // the bat
+  if (p.bat) {
+    var hx = shX + face * 10, hy = shY - 3;
+    var rad = p.bat.ang * Math.PI / 180;
+    var bx = hx + face * Math.cos(rad) * p.bat.len;
+    var by = hy - Math.sin(rad) * p.bat.len;
+    ctx.save();
+    ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.strokeStyle = c; ctx.shadowColor = col; ctx.shadowBlur = p.bat.trail ? 26 : 14;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(bx, by, 6, 0, 7); ctx.fill();
+    if (p.bat.trail) { // swing arc trail on the active frame
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(hx, hy, p.bat.len, -Math.PI * 0.75 * face + (face < 0 ? Math.PI : 0), (p.bat.trail === 2 ? 0.55 : 0.35) * face + (face < 0 ? Math.PI : 0), face < 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // charge meter: everyone can read exactly how ready the swing is
+  if (f.state === 'charge') {
+    var chAmt = clamp01((CFG.AC.maxCharge - tCont) / CFG.AC.maxCharge);
+    var ready = chAmt >= CFG.AC.minCharge / CFG.AC.maxCharge;
+    var mw = 64, mh = 8, mx = x - mw / 2, my = headY - 44;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(mx, my, mw, mh);
+    ctx.fillStyle = ready ? COL.gold : '#7fa8c9';
+    if (ready) { ctx.shadowColor = COL.gold; ctx.shadowBlur = 12; }
+    ctx.fillRect(mx, my, mw * chAmt, mh);
+    // minimum-charge notch
+    ctx.fillStyle = '#eafaff';
+    ctx.fillRect(mx + mw * (CFG.AC.minCharge / CFG.AC.maxCharge) - 1, my - 2, 2, mh + 4);
+    if (ready) {
+      ctx.font = '700 11px Bungee, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = COL.gold; ctx.shadowBlur = 8;
+      ctx.fillText(chAmt >= 1 ? 'MAX!' : 'READY', x, my - 8);
+    }
+    ctx.restore();
+  }
+  // fist + motion streak on the active frame
+  if (p.arm === 1) {
+    var fx = shX + face * (p.armKind === 'H' ? 48 : 48);
+    var fy = p.armKind === 'H' ? shY - 14 : shY + 44;
+    ctx.beginPath(); ctx.arc(fx, fy, 6, 0, 7); ctx.fill();
+    ctx.save(); ctx.globalAlpha = 0.5; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(fx - face * 26, fy); ctx.lineTo(fx - face * 6, fy); ctx.stroke();
+    ctx.restore();
+  }
+  // legs
+  ctx.beginPath();
+  if (p.jumpY > 0) {
+    ctx.moveTo(x, hipY); ctx.lineTo(x + face * 14, hipY + 20); ctx.lineTo(x + face * 5, hipY + 34);
+    ctx.moveTo(x, hipY); ctx.lineTo(x - face * 5, hipY + 17); ctx.lineTo(x - face * 16, hipY + 27);
+  } else if (p.crouch > 0.3) {
+    ctx.moveTo(x, hipY); ctx.lineTo(x + face * 22, hipY + 14); ctx.lineTo(x + face * 18, y);
+    ctx.moveTo(x, hipY); ctx.lineTo(x - face * 18, hipY + 16); ctx.lineTo(x - face * 22, y);
+  } else {
+    ctx.moveTo(x, hipY); ctx.lineTo(x + face * 14, (hipY + y) / 2); ctx.lineTo(x + face * 19, y);
+    ctx.moveTo(x, hipY); ctx.lineTo(x - face * 10, (hipY + y) / 2 + 4); ctx.lineTo(x - face * 17, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function render(now) {
+  S.raf = requestAnimationFrame(render);
+  if (!ctx || !S.m) return;
+  var w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  // interpolation clock: real time since last sim tick; frozen during hit-pause
+  var t01 = clamp01((now - S.lastTickAt) / CFG.TICK_MS);
+  if (now < S.hitPauseUntil) t01 = clamp01((S.hitPauseUntil - 200 - S.lastTickAt) / CFG.TICK_MS);
+  var sx = 0, sy = 0;
+  if (S.shake > 0) { sx = (Math.random() - 0.5) * S.shake; sy = (Math.random() - 0.5) * S.shake; S.shake *= 0.84; if (S.shake < 0.5) S.shake = 0; }
+  ctx.save(); ctx.translate(sx, sy);
+  // floor
+  ctx.strokeStyle = 'rgba(0,240,255,.35)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(16, h - 44); ctx.lineTo(w - 16, h - 44); ctx.stroke();
+  drawFighter(w, h, S.m.a, S.prevA, COL.you, t01, now);
+  drawFighter(w, h, S.m.b, S.prevB, COL.foe, t01, now);
+  // effects
+  for (var i = S.effects.length - 1; i >= 0; i--) {
+    var e = S.effects[i]; e.t += 1 / 60;
+    if (e.t > 0.9) { S.effects.splice(i, 1); continue; }
+    if (e.kind === 'spark') {
+      var ex = px(e.x, w), ey = h - 150;
+      ctx.save(); ctx.translate(ex, ey - e.t * 30); ctx.fillStyle = COL.gold; ctx.shadowColor = COL.gold; ctx.shadowBlur = 20;
+      ctx.beginPath();
+      for (var k = 0; k < 10; k++) { var a2 = k * Math.PI / 5, rr = (k % 2 ? 7 : 20) * (1 - e.t * 0.6); ctx.lineTo(Math.cos(a2) * rr, Math.sin(a2) * rr); }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    } else {
+      var who = e.who === 'a' ? S.m.a : S.m.b;
+      var tx = px(who.pos, w), ty = h - 230 - e.t * 55;
+      ctx.save(); ctx.globalAlpha = 1 - e.t;
+      ctx.font = '700 ' + (e.kind === 'dmg' ? (e.ch ? 34 : 28) : 15) + 'px Bungee, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = e.kind === 'dmg' ? (e.who === 'a' ? COL.foe : COL.you) : e.col;
+      ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
+      ctx.fillText(e.kind === 'dmg' ? '-' + e.val + (e.ch ? '!' : '') : e.txt, tx, ty);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+/* ================= inputs ================= */
+function classifyGesture(g, screenW, foeDir) { // foeDir: +1 foe is right, -1 foe is left
+  foeDir = foeDir || 1;
+  if (g.fingers >= 2) return 'BLOCK';
+  var dx = g.x1 - g.x0, dy = g.y1 - g.y0;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 24) {
+    // double-tap on the away-from-foe half = dodge; taps step absolutely
+    var awayHalf = foeDir > 0 ? g.x0 < screenW / 2 : g.x0 >= screenW / 2;
+    if (g.double && awayHalf) return 'DODGE';
+    return g.x0 >= screenW / 2 ? 'F' : 'B';
+  }
+  if (Math.abs(dy) > Math.abs(dx)) return dy < 0 ? 'JUMP' : 'CROUCH';
+  if ((dx > 0 ? 1 : -1) === foeDir) return g.x0 >= screenW / 2 ? 'AH' : 'AL'; // swipe toward foe = strike
+  return 'DODGE'; // swipe away = backstep
+}
+window.__sfClassify = classifyGesture;
+
+function bindInputs() {
+  /* canvas gestures (secondary on mobile, main on trackpads) */
+  var pointers = {}, lastTap = { t: 0, x: 0 }, twoFinger = false;
+  cv.addEventListener('pointerdown', function (e) {
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (Object.keys(pointers).length >= 2) { twoFinger = true; S.held.block = true; }
+  });
+  function release(e) {
+    var p0 = pointers[e.pointerId]; delete pointers[e.pointerId];
+    if (twoFinger) { if (Object.keys(pointers).length === 0) { twoFinger = false; S.held.block = false; } return; }
+    if (!p0) return;
+    var now = performance.now();
+    var dbl = (now - lastTap.t < 300) && Math.abs(e.clientX - lastTap.x) < 40;
+    var foeDir = S.m ? (S.m.b.pos >= S.m.a.pos ? 1 : -1) : 1;
+    var act = classifyGesture({ x0: p0.x, y0: p0.y, x1: e.clientX, y1: e.clientY, dt: now - p0.t, fingers: 1, double: dbl }, cv.clientWidth, foeDir);
+    lastTap = { t: now, x: e.clientX };
+    queueAction(act);
+  }
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', function (e) { delete pointers[e.pointerId]; });
+
+  /* keyboard: held movement + discrete actions */
+  window.addEventListener('keydown', function (e) {
+    if (e.repeat) return;
+    switch (e.code) {
+      case 'ArrowRight': case 'KeyD': S.held.f = true; e.preventDefault(); break;
+      case 'ArrowLeft': case 'KeyA': S.held.b = true; e.preventDefault(); break;
+      case 'ArrowDown': case 'KeyS': S.held.crouch = true; e.preventDefault(); break;
+      case 'ArrowUp': case 'KeyW': queueAction('JUMP'); e.preventDefault(); break;
+      case 'KeyJ': case 'KeyZ': queueAction('AH'); break;
+      case 'KeyK': case 'KeyX': queueAction('AL'); break;
+      case 'KeyL': case 'KeyC': queueAction('DODGE'); break;
+      case 'KeyU': case 'KeyO': queueAction('THROW'); break;
+      case 'KeyI': case 'KeyH': S.held.charge = true; break;
+      case 'Space': S.held.block = true; e.preventDefault(); break;
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    switch (e.code) {
+      case 'ArrowRight': case 'KeyD': S.held.f = false; break;
+      case 'ArrowLeft': case 'KeyA': S.held.b = false; break;
+      case 'ArrowDown': case 'KeyS': S.held.crouch = false; break;
+      case 'KeyI': case 'KeyH': S.held.charge = false; break;
+      case 'Space': S.held.block = false; break;
+    }
+  });
+
+  /* on-screen touch controls */
+  function bindHold(id, on, off) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('pointerdown', function (e) { e.preventDefault(); el.classList.add('on'); on(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
+      el.addEventListener(t, function () { el.classList.remove('on'); off && off(); });
+    });
+  }
+  function bindTap(id, act) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('pointerdown', function (e) { e.preventDefault(); el.classList.add('on'); queueAction(act); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
+      el.addEventListener(t, function () { el.classList.remove('on'); });
+    });
+  }
+  bindHold('padB', function () { S.held.b = true; }, function () { S.held.b = false; });
+  bindHold('padF', function () { S.held.f = true; }, function () { S.held.f = false; });
+  bindHold('btnBlock', function () { S.held.block = true; }, function () { S.held.block = false; });
+  bindHold('btnCharge', function () { S.held.charge = true; }, function () { S.held.charge = false; });
+  bindHold('btnCrouch', function () { S.held.crouch = true; }, function () { S.held.crouch = false; });
+  bindTap('btnJump', 'JUMP');
+  bindTap('btnHigh', 'AH');
+  bindTap('btnLow', 'AL');
+  bindTap('btnDodge', 'DODGE');
+  bindTap('btnThrow', 'THROW');
+}
+
+/* ================= menu ================= */
+function showMenu(on, title, col, sub) {
+  if (!menuEl) return;
+  menuEl.style.display = on ? 'flex' : 'none';
+  if (title) {
+    var t = document.getElementById('sfTitle');
+    t.textContent = title; t.style.color = col; t.style.textShadow = '0 0 34px ' + col;
+    document.getElementById('sfSub').textContent = sub || '';
+    document.getElementById('sfFight').textContent = 'REMATCH';
+  }
+}
+function buildMenu() {
+  var box = document.getElementById('sfTiers');
+  box.innerHTML = '';
+  Object.keys(AI.TIERS).forEach(function (t) {
+    var b = document.createElement('div');
+    b.className = 'sf-opt' + (S.tier === t ? ' sel' : '');
+    b.textContent = t.toUpperCase();
+    b.onclick = function () { S.tier = t; buildMenu(); };
+    box.appendChild(b);
+  });
+  document.getElementById('sfFight').onclick = function () { startMatch(S.tier); };
+}
+
+/* ================= boot ================= */
+function boot() {
+  cv = document.getElementById('sfCanvas');
+  ctx = cv.getContext && cv.getContext('2d');
+  hudYouHp = document.getElementById('sfYouHp'); hudFoeHp = document.getElementById('sfFoeHp');
+  hudYouSta = document.getElementById('sfYouSta'); hudFoeSta = document.getElementById('sfFoeSta');
+  hudTimer = document.getElementById('sfTimer');
+  menuEl = document.getElementById('sfMenu'); bannerEl = document.getElementById('sfBanner');
+  buildMenu(); showMenu(true);
+  bindInputs();
+  if (window.requestAnimationFrame) S.raf = requestAnimationFrame(render);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+
+</script>
+</body>
+</html>
