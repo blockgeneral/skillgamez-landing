@@ -28,20 +28,30 @@ body{display:flex;flex-direction:column;}
 .bars.you .tag{color:#00f0ff;}.bars.foe .tag{color:#ff2bd6;text-align:right;}
 #sfCanvas{position:relative;z-index:1;flex:1;width:100%;touch-action:none;}
 #sfBanner{position:fixed;left:0;right:0;top:24%;z-index:3;text-align:center;font-family:'Bungee';font-size:clamp(28px,8vw,58px);pointer-events:none;opacity:0;transition:opacity .25s;}
-/* on-screen controls (touch devices) */
-#sfPads{display:none;position:relative;z-index:2;padding:8px 12px calc(10px + env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;}
-@media (pointer:coarse){ #sfPads{display:flex;justify-content:space-between;gap:10px;} }
-.padL{display:flex;gap:10px;align-items:flex-end;}
-.padR{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.pbtn{font-family:'Bungee';border:3px solid #00f0ff;color:#00f0ff;background:rgba(0,240,255,.07);
-  border-radius:14px;text-align:center;touch-action:none;-webkit-tap-highlight-color:transparent;}
-.pbtn.on{background:#00f0ff;color:#05071c;box-shadow:0 0 18px rgba(0,240,255,.6);}
-.pmove{width:70px;height:70px;font-size:26px;line-height:64px;}
-.pact{width:74px;height:46px;font-size:12px;line-height:40px;}
-.pact.atk{border-color:#ff2bd6;color:#ff2bd6;background:rgba(255,43,214,.07);}
-.pact.atk.on{background:#ff2bd6;color:#05071c;box-shadow:0 0 18px rgba(255,43,214,.6);}
-.pact.gold{border-color:#ffd60a;color:#ffd60a;background:rgba(255,214,10,.07);}
-.pact.gold.on{background:#ffd60a;color:#05071c;box-shadow:0 0 18px rgba(255,214,10,.6);}
+/* touch controls: joystick + round icon buttons (48dp+ targets, arc by right thumb) */
+#sfStickBase,#sfStickKnob{display:none;position:fixed;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:4;}
+#sfStickBase{width:100px;height:100px;border:2px solid rgba(0,240,255,.5);background:rgba(0,240,255,.06);}
+#sfStickKnob{width:46px;height:46px;background:rgba(0,240,255,.45);box-shadow:0 0 16px rgba(0,240,255,.8);}
+#sfBtns{display:none;position:fixed;inset:0;pointer-events:none;z-index:4;}
+body.touch #sfBtns{display:block;}
+.ib{position:absolute;pointer-events:auto;width:62px;height:62px;border-radius:50%;
+  border:2.5px solid rgba(0,240,255,.65);background:rgba(0,240,255,.10);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:24px;line-height:1;user-select:none;-webkit-user-select:none;
+  touch-action:none;-webkit-tap-highlight-color:transparent;transition:transform .08s,background .08s;}
+.ib span{font-family:'Bungee';font-size:6.5px;color:#7fa8c9;margin-top:2px;letter-spacing:.04em;}
+.ib.atk{border-color:rgba(255,43,214,.7);background:rgba(255,43,214,.10);}
+.ib.gold{border-color:rgba(255,214,10,.7);background:rgba(255,214,10,.10);}
+.ib.big{width:76px;height:76px;font-size:30px;}
+.ib.on{transform:scale(.88);background:rgba(0,240,255,.4);box-shadow:0 0 20px rgba(0,240,255,.8);}
+.ib.atk.on{background:rgba(255,43,214,.45);box-shadow:0 0 20px rgba(255,43,214,.8);}
+.ib.gold.on{background:rgba(255,214,10,.45);box-shadow:0 0 20px rgba(255,214,10,.8);}
+.ib.smash{background:#ff9d00!important;box-shadow:0 0 26px #ff9d00!important;}
+#sfRotate{display:none;position:fixed;inset:0;z-index:9;background:#05071c;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
+  font-family:'Bungee';color:#ffd60a;font-size:clamp(18px,5vw,26px);padding:22px;}
+.rot-phone{font-size:52px;animation:rotph 1.6s ease-in-out infinite;}
+@keyframes rotph{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
 #sfMenu{position:fixed;inset:0;z-index:4;background:rgba(5,7,28,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:18px;overflow-y:auto;}
 #sfTitle{font-family:'Bungee';font-size:clamp(30px,8vw,58px);color:#eafaff;text-shadow:4px 4px 0 #ff2bd6;}
 #sfSub{color:#7fa8c9;font-size:14px;max-width:520px;}
@@ -64,22 +74,16 @@ body{display:flex;flex-direction:column;}
   <div class="bars foe"><div class="tag">RIVAL</div><div class="hp"><div id="sfFoeHp" style="width:100%"></div></div><div class="sta"><div id="sfFoeSta" style="width:100%"></div></div></div>
 </div>
 <canvas id="sfCanvas"></canvas>
-<div id="sfPads">
-  <div class="padL">
-    <div class="pbtn pmove" id="padB">◀</div>
-    <div class="pbtn pmove" id="padF">▶</div>
-  </div>
-  <div class="padR">
-    <div class="pbtn pact atk" id="btnHigh">HIGH</div>
-    <div class="pbtn pact atk" id="btnLow">LOW</div>
-    <div class="pbtn pact" id="btnJump">JUMP</div>
-    <div class="pbtn pact" id="btnCrouch">CROUCH</div>
-    <div class="pbtn pact gold" id="btnBlock">BLOCK</div>
-    <div class="pbtn pact gold" id="btnDodge">DODGE</div>
-    <div class="pbtn pact atk" id="btnCharge">⚡ CHARGE</div>
-    <div class="pbtn pact atk" id="btnThrow">SMASH</div>
-  </div>
+<!-- touch controls: floating joystick (left) + icon buttons (right) -->
+<div id="sfStickBase"></div><div id="sfStickKnob"></div>
+<div id="sfBtns">
+  <div class="ib gold" id="ibCharge" style="right:18px;bottom:158px;">⚡<span>CHARGE</span></div>
+  <div class="ib atk big" id="ibHigh" style="right:14px;bottom:72px;">👊<span>HIGH·HOLD=BAT</span></div>
+  <div class="ib atk" id="ibLow" style="right:100px;bottom:56px;">🦶<span>LOW</span></div>
+  <div class="ib" id="ibDodge" style="right:106px;bottom:132px;">💨<span>DODGE</span></div>
+  <div class="ib gold" id="ibBlock" style="right:180px;bottom:34px;">🛡<span>BLOCK</span></div>
 </div>
+<div id="sfRotate"><div class="rot-phone">📱</div>ROTATE YOUR PHONE<div style="font-family:'Space Grotesk';font-size:13px;color:#7fa8c9;">Stickman Fight plays in landscape only</div></div>
 <div id="sfBanner"></div>
 <div id="sfMenu">
   <a href="index.html" style="position:fixed;top:12px;left:14px;z-index:5;font-family:'Bungee';font-size:12px;color:#7fa8c9;text-decoration:none;border:2px solid rgba(127,168,201,.4);padding:6px 12px;">← SKILLGAMEZ</a>
@@ -89,8 +93,9 @@ body{display:flex;flex-direction:column;}
   <div class="sf-opts" id="sfTiers"></div>
   <button id="sfFight">FIGHT</button>
   <div class="sf-help">
-    <b>Buttons:</b> hold ◀ ▶ to move left/right — always screen-direction, even after you jump over your rival (works mid-air) · HIGH beats standing · LOW beats crouchers but is slower ·
-    CROUCH ducks highs (and you can throw LOW pokes without standing up) · JUMP sails over lows · hold BLOCK to absorb · crouch+block (any order) = <b>low guard</b>: highs whiff over you ·
+    <b>📱 Touch:</b> left thumb = joystick (push up to jump, down to crouch) · 👊 tap = high punch, <b>HOLD = BAT SMASH</b> ·
+    🦶 low kick · 🛡 hold to block (with crouch = low guard) · 💨 dodge · ⚡ hold &amp; release = charged slam<br>
+    <b>Rules:</b> HIGH beats standing · LOW beats crouchers but is slower · CROUCH ducks highs (and can throw LOW pokes) · JUMP sails over lows and over your rival · hold BLOCK to absorb · crouch+block (any order) = <b>low guard</b>: highs whiff over you ·
     hold <b>⚡ CHARGE</b> and release: huge damage, smashes through low guard — but miss it and you are stunned a full second ·
     <b>SMASH</b>: overhead bat — crushes straight through a standing block and catches jumpers (low guard slips under it; strikes beat its windup) · DODGE backsteps ·
     jump <b>over</b> your opponent to switch sides — but airborne you can be hit by highs and bats<br>
@@ -366,16 +371,37 @@ function advance(m, f) {
   return fire;
 }
 
-function clampPositions(m) {
+function wall(p) { return Math.max(3, Math.min(CFG.ARENA - 3, p)); }
+
+/* Solid bodies: grounded fighters can touch but never overlap.
+   - walker vs stander: the walker shoves the stander along
+   - both walking into each other: nobody moves
+   - overlap from knockback/lunge (no steps): symmetric midpoint split
+   - airborne: free to cross over */
+function resolveBodies(m, preA, preB) {
   var a = m.a, b = m.b;
-  a.pos = Math.max(3, Math.min(CFG.ARENA - 3, a.pos));
-  b.pos = Math.max(3, Math.min(CFG.ARENA - 3, b.pos));
-  if (a.state === 'jump' || b.state === 'jump') return; // airborne: free to cross over
-  if (Math.abs(a.pos - b.pos) < CFG.MIN_GAP) {
-    var mid = (a.pos + b.pos) / 2, s = a.pos < b.pos ? 1 : -1;
-    a.pos = mid - (CFG.MIN_GAP / 2) * s;
-    b.pos = mid + (CFG.MIN_GAP / 2) * s;
+  a.pos = wall(a.pos); b.pos = wall(b.pos);
+  if (a.state === 'jump' || b.state === 'jump') return;
+  var s = preA <= preB ? 1 : -1;           // +1: a on the left pre-move
+  if ((b.pos - a.pos) * s >= CFG.MIN_GAP) return; // no contact
+  var aTow = a.ev.stepped === s;           // a stepped toward b
+  var bTow = b.ev.stepped === -s;          // b stepped toward a
+  if (aTow && bTow) {                      // both push forward: stalemate
+    a.pos = preA; b.pos = preB;
+    if ((b.pos - a.pos) * s >= CFG.MIN_GAP) return;
+  } else if (aTow && !bTow) {              // a shoves b
+    b.pos = wall(a.pos + s * CFG.MIN_GAP);
+    a.pos = b.pos - s * CFG.MIN_GAP;       // wall-blocked shove stops the walker
+    return;
+  } else if (bTow && !aTow) {              // b shoves a
+    a.pos = wall(b.pos - s * CFG.MIN_GAP);
+    b.pos = a.pos + s * CFG.MIN_GAP;
+    return;
   }
+  // residual overlap (knockback, lunge, stale positions): split at midpoint
+  var mid = (a.pos + b.pos) / 2;
+  a.pos = wall(mid - (CFG.MIN_GAP / 2) * s);
+  b.pos = wall(mid + (CFG.MIN_GAP / 2) * s);
 }
 
 /* one server tick: apply both players' actions, advance states, resolve */
@@ -392,7 +418,7 @@ function step(m, actA, actB) {
   var posA = m.a.pos, posB = m.b.pos; // snapshot: simultaneous action application
   applyAction(m.a, posB, actA);
   applyAction(m.b, posA, actB);
-  clampPositions(m);
+  resolveBodies(m, posA, posB);
   if (m.a.pos !== m.b.pos) { m.a.face = m.a.pos < m.b.pos ? 1 : -1; m.b.face = -m.a.face; }
   if (m.a.hp <= 0 || m.b.hp <= 0) {
     m.over = true;
@@ -593,6 +619,10 @@ function startMatch(tier) {
   clearInterval(S.simTimer);
   S.simTimer = setInterval(tick, CFG.TICK_MS);
   updateHud();
+  if (document.body.classList.contains('touch')) {
+    try { var de = document.documentElement; if (de.requestFullscreen) de.requestFullscreen().catch(function(){}); } catch (_) {}
+    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); } catch (_) {}
+  }
 }
 window.__sfStart = startMatch;
 
@@ -646,7 +676,7 @@ function queueAction(act) {
 window.__sfQueue = queueAction;
 
 function tick() {
-  if (S.screen !== 'fight') return;
+  if (S.screen !== 'fight' || S.paused) return;
   S.prevA = S.m.a.pos; S.prevB = S.m.b.pos;
   var act = playerAction();
   var aiAction = AI.aiAct(S.ai, S.m.b, S.m.a);
@@ -920,45 +950,106 @@ function render(now) {
 }
 
 /* ================= inputs ================= */
-function classifyGesture(g, screenW, foeDir) { // foeDir: +1 foe is right, -1 foe is left
+var SMASH_HOLD_MS = 400; // hold HIGH this long = bat smash
+function highDecide(heldMs) { return heldMs >= SMASH_HOLD_MS ? 'THROW' : 'AH'; }
+window.__sfHighDecide = highDecide;
+
+/* joystick mapping: x = walk, up = jump (edge-triggered), down = crouch */
+function stickMap(dx, dy) {
+  var DEAD = 14;
+  return { f: dx > DEAD, b: dx < -DEAD, crouch: dy > 26, jump: dy < -30 };
+}
+window.__sfStickMap = stickMap;
+
+function classifyGesture(g, screenW, foeDir) { // desktop mouse gestures
   foeDir = foeDir || 1;
   if (g.fingers >= 2) return 'BLOCK';
   var dx = g.x1 - g.x0, dy = g.y1 - g.y0;
   var dist = Math.sqrt(dx * dx + dy * dy);
   if (dist < 24) {
-    // double-tap on the away-from-foe half = dodge; taps step absolutely
     var awayHalf = foeDir > 0 ? g.x0 < screenW / 2 : g.x0 >= screenW / 2;
     if (g.double && awayHalf) return 'DODGE';
     return g.x0 >= screenW / 2 ? 'F' : 'B';
   }
   if (Math.abs(dy) > Math.abs(dx)) return dy < 0 ? 'JUMP' : 'CROUCH';
-  if ((dx > 0 ? 1 : -1) === foeDir) return g.x0 >= screenW / 2 ? 'AH' : 'AL'; // swipe toward foe = strike
-  return 'DODGE'; // swipe away = backstep
+  if ((dx > 0 ? 1 : -1) === foeDir) return g.x0 >= screenW / 2 ? 'AH' : 'AL';
+  return 'DODGE';
 }
 window.__sfClassify = classifyGesture;
 
+/* portrait gate: touch devices play in landscape only; fight pauses if rotated */
+function checkOrient() {
+  var rot = document.getElementById('sfRotate');
+  if (!rot) return;
+  var show = document.body.classList.contains('touch') && window.innerHeight > window.innerWidth;
+  rot.style.display = show ? 'flex' : 'none';
+  if (show && S.screen === 'fight' && !S.paused) { S.paused = true; clearInterval(S.simTimer); }
+  else if (!show && S.paused && S.screen === 'fight') {
+    S.paused = false; S.lastTickAt = performance.now();
+    clearInterval(S.simTimer); S.simTimer = setInterval(tick, CFG.TICK_MS);
+  }
+}
+window.__sfCheckOrient = checkOrient;
+
 function bindInputs() {
-  /* canvas gestures (secondary on mobile, main on trackpads) */
-  var pointers = {}, lastTap = { t: 0, x: 0 }, twoFinger = false;
+  var isTouch = (window.matchMedia && matchMedia('(pointer:coarse)').matches);
+  if (isTouch) document.body.classList.add('touch');
+  checkOrient();
+  window.addEventListener('resize', checkOrient);
+  window.addEventListener('orientationchange', checkOrient);
+
+  /* ---- floating joystick: left 45% of the screen, origin where the thumb lands ---- */
+  var base = document.getElementById('sfStickBase'), knob = document.getElementById('sfStickKnob');
+  var stickId = null, sx = 0, sy = 0, jumpLatch = false;
+  function stickTo(bx, by, kx, ky) {
+    base.style.left = bx + 'px'; base.style.top = by + 'px';
+    knob.style.left = kx + 'px'; knob.style.top = ky + 'px';
+  }
+  function stickHide() {
+    base.style.display = knob.style.display = 'none';
+    S.held.f = S.held.b = S.held.crouch = false; jumpLatch = false;
+  }
   cv.addEventListener('pointerdown', function (e) {
-    pointers[e.pointerId] = { x: e.clientX, y: e.clientY, t: performance.now() };
-    if (Object.keys(pointers).length >= 2) { twoFinger = true; S.held.block = true; }
+    if (e.pointerType === 'touch') {
+      if (stickId === null && e.clientX < window.innerWidth * 0.45) {
+        stickId = e.pointerId; sx = e.clientX; sy = e.clientY;
+        base.style.display = knob.style.display = 'block';
+        stickTo(sx, sy, sx, sy);
+        try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      return;
+    }
+    mDown = { x: e.clientX, y: e.clientY, t: performance.now() };
   });
-  function release(e) {
-    var p0 = pointers[e.pointerId]; delete pointers[e.pointerId];
-    if (twoFinger) { if (Object.keys(pointers).length === 0) { twoFinger = false; S.held.block = false; } return; }
-    if (!p0) return;
+  cv.addEventListener('pointermove', function (e) {
+    if (e.pointerId !== stickId) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    var len = Math.sqrt(dx * dx + dy * dy), max = 52;
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    stickTo(sx, sy, sx + dx, sy + dy);
+    var mp = stickMap(dx, dy);
+    S.held.f = mp.f; S.held.b = mp.b; S.held.crouch = mp.crouch;
+    if (mp.jump && !jumpLatch) { queueAction('JUMP'); jumpLatch = true; }
+    if (!mp.jump) jumpLatch = false;
+  });
+  function stickEnd(e) { if (e.pointerId === stickId) { stickId = null; stickHide(); } }
+  cv.addEventListener('pointerup', stickEnd);
+  cv.addEventListener('pointercancel', stickEnd);
+
+  /* ---- desktop mouse gestures on the canvas ---- */
+  var mDown = null, lastTap = { t: 0, x: 0 };
+  cv.addEventListener('pointerup', function (e) {
+    if (e.pointerType === 'touch' || !mDown) return;
     var now = performance.now();
     var dbl = (now - lastTap.t < 300) && Math.abs(e.clientX - lastTap.x) < 40;
     var foeDir = S.m ? (S.m.b.pos >= S.m.a.pos ? 1 : -1) : 1;
-    var act = classifyGesture({ x0: p0.x, y0: p0.y, x1: e.clientX, y1: e.clientY, dt: now - p0.t, fingers: 1, double: dbl }, cv.clientWidth, foeDir);
+    var act = classifyGesture({ x0: mDown.x, y0: mDown.y, x1: e.clientX, y1: e.clientY, fingers: 1, double: dbl }, cv.clientWidth, foeDir);
     lastTap = { t: now, x: e.clientX };
     queueAction(act);
-  }
-  cv.addEventListener('pointerup', release);
-  cv.addEventListener('pointercancel', function (e) { delete pointers[e.pointerId]; });
+    mDown = null;
+  });
 
-  /* keyboard: held movement + discrete actions */
+  /* ---- keyboard ---- */
   window.addEventListener('keydown', function (e) {
     if (e.repeat) return;
     switch (e.code) {
@@ -968,8 +1059,8 @@ function bindInputs() {
       case 'ArrowUp': case 'KeyW': queueAction('JUMP'); e.preventDefault(); break;
       case 'KeyJ': case 'KeyZ': queueAction('AH'); break;
       case 'KeyK': case 'KeyX': queueAction('AL'); break;
-      case 'KeyL': case 'KeyC': queueAction('DODGE'); break;
       case 'KeyU': case 'KeyO': queueAction('THROW'); break;
+      case 'KeyL': case 'KeyC': queueAction('DODGE'); break;
       case 'KeyI': case 'KeyH': S.held.charge = true; break;
       case 'Space': S.held.block = true; e.preventDefault(); break;
     }
@@ -984,33 +1075,51 @@ function bindInputs() {
     }
   });
 
-  /* on-screen touch controls */
-  function bindHold(id, on, off) {
+  /* ---- icon action buttons (touch): big, round, pressed-state feedback ---- */
+  function ibPress(el, on) { el.classList.toggle('on', on); }
+  function bindHoldBtn(id, on, off) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('pointerdown', function (e) { e.preventDefault(); el.classList.add('on'); on(); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
-      el.addEventListener(t, function () { el.classList.remove('on'); off && off(); });
+    el.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); ibPress(el, true); on();
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    ['pointerup', 'pointercancel'].forEach(function (t) {
+      el.addEventListener(t, function () { ibPress(el, false); off && off(); });
     });
   }
-  function bindTap(id, act) {
+  function bindTapBtn(id, act) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('pointerdown', function (e) { e.preventDefault(); el.classList.add('on'); queueAction(act); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
-      el.addEventListener(t, function () { el.classList.remove('on'); });
+    el.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); ibPress(el, true); queueAction(act);
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    ['pointerup', 'pointercancel'].forEach(function (t) {
+      el.addEventListener(t, function () { ibPress(el, false); });
     });
   }
-  bindHold('padB', function () { S.held.b = true; }, function () { S.held.b = false; });
-  bindHold('padF', function () { S.held.f = true; }, function () { S.held.f = false; });
-  bindHold('btnBlock', function () { S.held.block = true; }, function () { S.held.block = false; });
-  bindHold('btnCharge', function () { S.held.charge = true; }, function () { S.held.charge = false; });
-  bindHold('btnCrouch', function () { S.held.crouch = true; }, function () { S.held.crouch = false; });
-  bindTap('btnJump', 'JUMP');
-  bindTap('btnHigh', 'AH');
-  bindTap('btnLow', 'AL');
-  bindTap('btnDodge', 'DODGE');
-  bindTap('btnThrow', 'THROW');
+  // HIGH: tap = high punch · hold 400ms = the bat SMASH, fires at the threshold
+  var hb = document.getElementById('ibHigh');
+  if (hb) {
+    var hTimer = null, hFired = false;
+    hb.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); ibPress(hb, true); hFired = false;
+      try { hb.setPointerCapture(e.pointerId); } catch (_) {}
+      hTimer = setTimeout(function () { hFired = true; hb.classList.add('smash'); queueAction('THROW'); }, SMASH_HOLD_MS);
+    });
+    ['pointerup', 'pointercancel'].forEach(function (t) {
+      hb.addEventListener(t, function () {
+        ibPress(hb, false); hb.classList.remove('smash'); clearTimeout(hTimer);
+        if (!hFired) queueAction('AH');
+        hFired = false;
+      });
+    });
+  }
+  bindTapBtn('ibLow', 'AL');
+  bindTapBtn('ibDodge', 'DODGE');
+  bindHoldBtn('ibBlock', function () { S.held.block = true; }, function () { S.held.block = false; });
+  bindHoldBtn('ibCharge', function () { S.held.charge = true; }, function () { S.held.charge = false; });
 }
 
 /* ================= menu ================= */
