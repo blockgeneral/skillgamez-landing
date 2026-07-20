@@ -33,6 +33,18 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;width:100vw;
 #sfStickBase,#sfStickKnob{display:none;position:fixed;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:4;}
 #sfStickBase{width:100px;height:100px;border:2px solid rgba(0,240,255,.5);background:rgba(0,240,255,.06);}
 #sfStickKnob{width:46px;height:46px;background:rgba(0,240,255,.45);box-shadow:0 0 16px rgba(0,240,255,.8);}
+#sfStickHint{display:none;position:fixed;left:max(22px,env(safe-area-inset-left));bottom:calc(26px + env(safe-area-inset-bottom));
+  width:112px;height:112px;border-radius:50%;border:2.5px dashed rgba(0,240,255,.45);background:rgba(0,240,255,.05);
+  z-index:3;pointer-events:none;opacity:.75;transition:opacity .15s;}
+body.touch.fighting #sfStickHint{display:block;}
+body.stickon #sfStickHint{opacity:0;}
+#sfStickHint span{position:absolute;font-size:16px;color:rgba(0,240,255,.8);text-shadow:0 0 8px rgba(0,240,255,.6);}
+.sh-up{top:6px;left:50%;transform:translateX(-50%);}
+.sh-dn{bottom:6px;left:50%;transform:translateX(-50%);}
+.sh-lf{left:8px;top:50%;transform:translateY(-50%);}
+.sh-rt{right:8px;top:50%;transform:translateY(-50%);}
+.sh-lbl{font-family:'Bungee';font-size:8px!important;color:rgba(127,168,201,.9)!important;top:50%;left:50%;transform:translate(-50%,-50%);text-shadow:none!important;}
+@media (max-height:520px){ #sfStickHint{width:92px;height:92px;} #sfStickHint span{font-size:13px;} }
 #sfBtns{display:none;position:fixed;inset:0;pointer-events:none;z-index:4;}
 body.touch #sfBtns{display:block;}
 .ib{position:absolute;pointer-events:auto;width:62px;height:62px;border-radius:50%;
@@ -95,6 +107,10 @@ body.touch #sfBtns{display:block;}
 <canvas id="sfCanvas"></canvas>
 <!-- touch controls: floating joystick (left) + icon buttons (right) -->
 <div id="sfStickBase"></div><div id="sfStickKnob"></div>
+<div id="sfStickHint">
+  <span class="sh-up">▲</span><span class="sh-dn">▼</span><span class="sh-lf">◀</span><span class="sh-rt">▶</span>
+  <span class="sh-lbl">MOVE</span>
+</div>
 <div id="sfBtns">
   <div class="ib gold" id="ibCharge" style="right:18px;bottom:158px;">⚡<span>CHARGE</span></div>
   <div class="ib atk big" id="ibHigh" style="right:14px;bottom:72px;">👊<span>HIGH·HOLD=BAT</span></div>
@@ -638,6 +654,7 @@ function startMatch(tier) {
   S.held = { f: false, b: false, crouch: false, block: false, charge: false };
   S.prevA = S.m.a.pos; S.prevB = S.m.b.pos;
   S.screen = 'fight';
+  document.body.classList.add('fighting');
   showMenu(false);
   banner('FIGHT!', COL.gold, 900);
   S.lastTickAt = performance.now();
@@ -715,6 +732,7 @@ function tick() {
     var w = S.m.winner;
     var youWon = w === 'a', tie = w === 'draw';
     setTimeout(function () {
+      document.body.classList.remove('fighting');
       showMenu(true, tie ? 'DRAW' : youWon ? 'YOU WIN' : 'YOU LOSE',
         tie ? COL.gold : youWon ? COL.you : COL.foe,
         'HP ' + Math.max(0, S.m.a.hp) + ' – ' + Math.max(0, S.m.b.hp) + ' vs ' + S.tier.toUpperCase() + ' AI');
@@ -815,7 +833,9 @@ function phases(f, tCont) {
 function drawFighter(w, h, f, prevPos, col, t01, now) {
   // unit-true rendering: fighters scale with the arena so visual contact == logic contact
   var xScreen = px(lerp(prevPos, f.pos, t01), w);
-  var sc = Math.max(0.42, ((w - 60) / CFG.ARENA) / 11.4);
+  var scW = ((w - 60) / CFG.ARENA) / 11.4;
+  var scH = h / 390; // ground margin + body + jump arc + charge meter, reference px
+  var sc = Math.max(0.34, Math.min(scW, scH));
   ctx.save();
   ctx.translate(xScreen, h - 46);
   ctx.scale(sc, sc);
@@ -942,7 +962,9 @@ function render(now) {
   S.raf = requestAnimationFrame(render);
   if (!ctx || !S.m) return;
   var w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
-  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   // interpolation clock: real time since last sim tick; frozen during hit-pause
@@ -1038,6 +1060,7 @@ function bindInputs() {
     knob.style.left = kx + 'px'; knob.style.top = ky + 'px';
   }
   function stickHide() {
+    document.body.classList.remove('stickon');
     base.style.display = knob.style.display = 'none';
     S.held.f = S.held.b = S.held.crouch = false; jumpLatch = false;
   }
@@ -1045,6 +1068,7 @@ function bindInputs() {
     if (e.pointerType === 'touch') {
       if (stickId === null && e.clientX < window.innerWidth * 0.45) {
         stickId = e.pointerId; sx = e.clientX; sy = e.clientY;
+        document.body.classList.add('stickon');
         base.style.display = knob.style.display = 'block';
         stickTo(sx, sy, sx, sy);
         try { cv.setPointerCapture(e.pointerId); } catch (_) {}
