@@ -10,7 +10,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:#05071c;color:#eafaff;font-family:'Space Grotesk',sans-serif;overflow:hidden;}
-body{display:flex;flex-direction:column;}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh;width:100vw;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
 .gridbg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);background-size:44px 44px;}
 .hud{position:relative;z-index:2;padding:10px 14px 6px;display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;}
 .bars{display:flex;flex-direction:column;gap:4px;}
@@ -52,6 +53,24 @@ body.touch #sfBtns{display:block;}
   font-family:'Bungee';color:#ffd60a;font-size:clamp(18px,5vw,26px);padding:22px;}
 .rot-phone{font-size:52px;animation:rotph 1.6s ease-in-out infinite;}
 @keyframes rotph{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+/* short landscape phones: compact chrome, game gets the pixels */
+@media (max-height:520px){
+  .hud{padding:4px 12px 2px;gap:8px;}
+  .hp{height:11px;border-width:1.5px;}
+  .sta{height:6px;}
+  #sfTimer{font-size:20px;}
+  .tag{font-size:8px;margin-bottom:1px;}
+  #sfMenu{gap:8px;padding:8px;justify-content:flex-start;padding-top:12px;}
+  #sfTitle{font-size:clamp(20px,5vh,30px);}
+  #sfSub{font-size:11px;}
+  .sf-opt{font-size:11px;padding:7px 12px;border-width:2px;}
+  #sfFight{font-size:14px;padding:10px 26px;}
+  .sf-help{font-size:9.5px;line-height:1.5;max-width:92vw;}
+  .sf-demo{font-size:8px;}
+  .ib{width:54px;height:54px;font-size:20px;}
+  .ib.big{width:66px;height:66px;font-size:26px;}
+  .ib span{font-size:5.5px;}
+}
 #sfMenu{position:fixed;inset:0;z-index:4;background:rgba(5,7,28,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:18px;overflow-y:auto;}
 #sfTitle{font-family:'Bungee';font-size:clamp(30px,8vw,58px);color:#eafaff;text-shadow:4px 4px 0 #ff2bd6;}
 #sfSub{color:#7fa8c9;font-size:14px;max-width:520px;}
@@ -121,11 +140,12 @@ var CFG = {
   MIN_GAP: 6,                // fighters can't overlap closer than this
   STEP: 5,                   // units per movement tick (hold to walk) — 1.25x
   AIR_DRIFT: 3.75,           // air control while jumping (locked direction, crosses over)
-  RANGE: 9,                  // attack reach (tight — contact must be felt)
-  LUNGE: 3,                  // attacker lunges forward on the active frame
+  RANGE: 7.4,                // AI engagement distance (= max punch contact)
+  LUNGE: 3,                  // bat attacks lunge forward on the active frame (punches do NOT)
+  BODY: { half: 1.8, low: 2.2, air: 1.5 }, // body half-width by stance, arena units
   HP: 100, STA: 100,
-  AH: { startup: 2, active: 1, recovery: 1, dmg: 25, cost: 12 },  // high: fast (1.25x)
-  AL: { startup: 3, active: 1, recovery: 2, dmg: 20, cost: 9 },  // low: deliberately slow — its speed IS the balance
+  AH: { startup: 2, active: 1, recovery: 1, dmg: 25, cost: 12, reach: 5.6 },  // high: fast
+  AL: { startup: 3, active: 1, recovery: 2, dmg: 20, cost: 9, reach: 5.6 },  // low: deliberately slow
   PUSHBACK: 5,               // landed hit knocks defender back
   PUNISH_DMG: 40,            // unblocked hit on exhausted
   JUMP_TICKS: 5,             // airborne: avoids low (1.25x, higher arc)
@@ -137,9 +157,9 @@ var CFG = {
   BLOCKED_ATK_COST: 10,      // attacking into a block is a failed attack
   BLOCK_ABSORB_COST: 8,      // absorbing a hit drains the blocker a little
   STAGGER_TICKS: 3,          // extra recovery after whiffed/blocked attack
-  AC: { startup: 2, active: 1, recovery: 3, dmgBase: 30, cost: 18, cancelCost: 4,
+  AC: { startup: 2, active: 1, recovery: 3, dmgBase: 30, cost: 18, cancelCost: 4, reach: 7,
         minCharge: 3, maxCharge: 12, absorb: 16, selfStun: 10, push: 8 }, // charged bat swing: release->impact fixed 300ms
-  THROW: { startup: 2, active: 1, recovery: 2, dmg: 16, cost: 8, range: 7, push: 10 }, // grabs through standing block
+  THROW: { startup: 2, active: 1, recovery: 2, dmg: 16, cost: 8, reach: 6, push: 10 }, // overhead smash, goes through standing block
   STUN_TICKS: 10,            // exhausted: 1s of free-hit
   HITSTUN_TICKS: 3,
   REGEN: 1                   // per tick, only while idle
@@ -244,6 +264,12 @@ function applyAction(f, foePosSnapshot, act) {
   }
 }
 
+function bodyHalf(snap) {
+  if (snap.state === 'jump') return CFG.BODY.air;
+  if (snap.state === 'crouch' || (snap.state === 'block' && snap.low)) return CFG.BODY.low;
+  return CFG.BODY.half;
+}
+
 function stagger(f, spec) {
   if (f.state === 'stun') return; // exhaustion overrides
   f.state = 'stagger'; f.t = spec.recovery + CFG.STAGGER_TICKS;
@@ -256,13 +282,13 @@ function stagger(f, spec) {
    standing block absorbs it at heavy cost, jump/dodge/range = whiff and the
    attacker is STUNNED for a full second. */
 function resolveCharge(m, atk, def, defSnap) {
-  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * CFG.LUNGE;
+  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * CFG.LUNGE; // the bat commits forward
   var dist = Math.abs(atk.pos - defSnap.pos);
   var dmg = 0, hit = false, why = '';
-  var miss = dist > CFG.RANGE ||
+  var miss = dist - bodyHalf(defSnap) > CFG.AC.reach ||
     (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES);
   if (miss) {
-    why = dist > CFG.RANGE ? 'range' : 'dodged';
+    why = defSnap.state === 'dodge' ? 'dodged' : 'range';
     atk.state = 'stun'; atk.t = CFG.AC.selfStun; atk.charged = 0; // overcommitted
     atk.ev.whiffed = true; atk.ev.exhausted = true;
   } else if (defSnap.state === 'block' && !defSnap.low) {
@@ -287,10 +313,10 @@ CFG.dmgOfCharge = function (charged) { return CFG.AC.dmgBase + charged; }; // 33
 /* throw: grabs through STANDING block; crouch-block slips it (immune);
    jump/dodge evade; a defender mid-strike beats the throw. */
 function resolveThrow(m, atk, def, defSnap) {
-  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * 2; // short step-in
+  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * 2; // bat swing steps in
   var dist = Math.abs(atk.pos - defSnap.pos);
   var hit = false, dmg = 0, why = '';
-  if (dist > CFG.THROW.range) why = 'range';
+  if (dist - bodyHalf(defSnap) > CFG.THROW.reach) why = 'range';
   else if (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES) why = 'dodged';
   else if (defSnap.state === 'block' && defSnap.low) { why = 'slipped'; def.ev.slipped = true; } // crouch-block slips under the arc
   else if (defSnap.state === 'atkH' || defSnap.state === 'atkL' || defSnap.state === 'atkC') why = 'struck'; // strikes beat throws
@@ -312,11 +338,10 @@ function resolveAttack(m, atk, def, kind, defSnap) {
   if (kind === 'C') return resolveCharge(m, atk, def, defSnap);
   if (kind === 'T') return resolveThrow(m, atk, def, defSnap);
   var spec = kind === 'H' ? CFG.AH : CFG.AL;
-  // lunge: attacker commits forward on the active frame — hits read as contact
-  atk.pos += (defSnap.pos > atk.pos ? 1 : -1) * CFG.LUNGE;
+  // punches stay planted: no lunge — a whiff leaves you exposed where you stand
   var dist = Math.abs(atk.pos - defSnap.pos);
   var hit = false, dmg = 0, why = '';
-  if (dist > CFG.RANGE) { why = 'range'; }
+  if (dist - bodyHalf(defSnap) > spec.reach) { why = 'range'; }
   else if (defSnap.state === 'dodge' && (CFG.DODGE_TICKS - defSnap.t) < CFG.DODGE_IFRAMES) { why = 'dodged'; }
   else if (defSnap.state === 'crouch' && kind === 'H') { why = 'crouched'; }
   else if (defSnap.state === 'block' && defSnap.low && kind === 'H') { why = 'crouched'; }
@@ -749,23 +774,23 @@ function phases(f, tCont) {
     var chg = clamp01((CFG.AC.maxCharge - tCont) / CFG.AC.maxCharge);
     p.lean = -0.15; p.chargeGlow = chg; p.chargeAmt = chg;
     // bat raised overhead, quivering harder as it charges
-    p.bat = { ang: 115 + Math.sin(Date.now() / 60) * (3 + chg * 7), len: 46, trail: 0 };
+    p.bat = { ang: 115 + Math.sin(Date.now() / 60) * (3 + chg * 7), len: 72, trail: 0 };
   }
   else if (st === 'throw') { // SMASH: quick overhead bat swing
     var totT = CFG.THROW.startup + CFG.THROW.active + CFG.THROW.recovery;
     var elT = clamp01((totT - tCont) / totT) * totT;
     var su = CFG.THROW.startup, ac = CFG.THROW.active;
-    if (elT < su) p.bat = { ang: 50 + (elT / su) * 120, len: 42, trail: 0 };            // raise behind head
-    else if (elT < su + ac) { p.bat = { ang: -30, len: 42, trail: 1 }; p.lean = 0.35; } // slam down in front
-    else p.bat = { ang: -30 + ((elT - su - ac) / CFG.THROW.recovery) * 80, len: 42, trail: 0 };
+    if (elT < su) p.bat = { ang: 50 + (elT / su) * 120, len: 68, trail: 0 };            // raise behind head
+    else if (elT < su + ac) { p.bat = { ang: -30, len: 68, trail: 1 }; p.lean = 0.35; } // slam down in front
+    else p.bat = { ang: -30 + ((elT - su - ac) / CFG.THROW.recovery) * 80, len: 68, trail: 0 };
   }
   else if (st === 'atkC') { // charged mega-slam: fixed 300ms from release to impact
     var totC = CFG.AC.startup + CFG.AC.active + CFG.AC.recovery;
     var elC = clamp01((totC - tCont) / totC) * totC;
     var suC = CFG.AC.startup, acC = CFG.AC.active;
-    if (elC < suC) { p.bat = { ang: 120 + (elC / suC) * 55, len: 54, trail: 0 }; p.lean = -0.1; } // rear back
-    else if (elC < suC + acC) { p.bat = { ang: -35, len: 54, trail: 2 }; p.lean = 0.55; p.heavy = true; } // SLAM
-    else { p.bat = { ang: -35 + ((elC - suC - acC) / CFG.AC.recovery) * 85, len: 54, trail: 0 }; p.lean = 0.2; }
+    if (elC < suC) { p.bat = { ang: 120 + (elC / suC) * 55, len: 80, trail: 0 }; p.lean = -0.1; } // rear back
+    else if (elC < suC + acC) { p.bat = { ang: -35, len: 80, trail: 2 }; p.lean = 0.55; p.heavy = true; } // SLAM
+    else { p.bat = { ang: -35 + ((elC - suC - acC) / CFG.AC.recovery) * 85, len: 80, trail: 0 }; p.lean = 0.2; }
   }
   else if (st === 'jump') {
     var ph = clamp01(1 - tCont / CFG.JUMP_TICKS);
@@ -788,8 +813,14 @@ function phases(f, tCont) {
 }
 
 function drawFighter(w, h, f, prevPos, col, t01, now) {
-  var gy = h - 46;
-  var x = px(lerp(prevPos, f.pos, t01), w);
+  // unit-true rendering: fighters scale with the arena so visual contact == logic contact
+  var xScreen = px(lerp(prevPos, f.pos, t01), w);
+  var sc = Math.max(0.42, ((w - 60) / CFG.ARENA) / 11.4);
+  ctx.save();
+  ctx.translate(xScreen, h - 46);
+  ctx.scale(sc, sc);
+  var gy = 0;
+  var x = 0;
   var tCont = Math.max(0, f.t - t01);
   var p = phases(f, tCont);
   var face = f.face;
@@ -825,7 +856,7 @@ function drawFighter(w, h, f, prevPos, col, t01, now) {
     ctx.moveTo(shX, shY + 8); ctx.lineTo(shX + face * 22, shY + 8); ctx.lineTo(shX + face * 16, shY - 13);
   } else if (p.armKind === 'H') {
     var e = p.arm;
-    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (14 + e * 34), shY - 4 - Math.max(0, e) * 10);
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (14 + e * 50), shY - 4 - Math.max(0, e) * 10);
     ctx.moveTo(shX, shY + 8); ctx.lineTo(shX - face * 11, shY + 18);
   } else if (p.bat) {
     // both hands gripping toward the bat
@@ -833,7 +864,7 @@ function drawFighter(w, h, f, prevPos, col, t01, now) {
     ctx.moveTo(shX, shY + 8); ctx.lineTo(shX + face * 10, shY - 2);
   } else if (p.armKind === 'L') {
     var e2 = p.arm;
-    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (12 + e2 * 36), shY + 26 + Math.max(0, e2) * 18);
+    ctx.moveTo(shX, shY + 4); ctx.lineTo(shX + face * (12 + e2 * 52), shY + 26 + Math.max(0, e2) * 18);
     ctx.moveTo(shX, shY + 8); ctx.lineTo(shX - face * 9, shY + 16);
   } else {
     var sway = Math.sin(now / 260) * 3;
@@ -861,29 +892,9 @@ function drawFighter(w, h, f, prevPos, col, t01, now) {
     }
     ctx.restore();
   }
-  // charge meter: everyone can read exactly how ready the swing is
-  if (f.state === 'charge') {
-    var chAmt = clamp01((CFG.AC.maxCharge - tCont) / CFG.AC.maxCharge);
-    var ready = chAmt >= CFG.AC.minCharge / CFG.AC.maxCharge;
-    var mw = 64, mh = 8, mx = x - mw / 2, my = headY - 44;
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(mx, my, mw, mh);
-    ctx.fillStyle = ready ? COL.gold : '#7fa8c9';
-    if (ready) { ctx.shadowColor = COL.gold; ctx.shadowBlur = 12; }
-    ctx.fillRect(mx, my, mw * chAmt, mh);
-    // minimum-charge notch
-    ctx.fillStyle = '#eafaff';
-    ctx.fillRect(mx + mw * (CFG.AC.minCharge / CFG.AC.maxCharge) - 1, my - 2, 2, mh + 4);
-    if (ready) {
-      ctx.font = '700 11px Bungee, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillStyle = COL.gold; ctx.shadowBlur = 8;
-      ctx.fillText(chAmt >= 1 ? 'MAX!' : 'READY', x, my - 8);
-    }
-    ctx.restore();
-  }
   // fist + motion streak on the active frame
   if (p.arm === 1) {
-    var fx = shX + face * (p.armKind === 'H' ? 48 : 48);
+    var fx = shX + face * 64;
     var fy = p.armKind === 'H' ? shY - 14 : shY + 44;
     ctx.beginPath(); ctx.arc(fx, fy, 6, 0, 7); ctx.fill();
     ctx.save(); ctx.globalAlpha = 0.5; ctx.lineWidth = 3;
@@ -904,6 +915,27 @@ function drawFighter(w, h, f, prevPos, col, t01, now) {
   }
   ctx.stroke();
   ctx.shadowBlur = 0;
+  ctx.restore(); // end unit-true transform
+  // charge meter: screen-space so it stays crisp at any scale
+  if (f.state === 'charge') {
+    var chAmt = clamp01((CFG.AC.maxCharge - tCont) / CFG.AC.maxCharge);
+    var ready = chAmt >= CFG.AC.minCharge / CFG.AC.maxCharge;
+    var mw = 64, mh = 8, mx = xScreen - mw / 2, my = (h - 46) + (headY - 44) * sc;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(mx, my, mw, mh);
+    ctx.fillStyle = ready ? COL.gold : '#7fa8c9';
+    if (ready) { ctx.shadowColor = COL.gold; ctx.shadowBlur = 12; }
+    ctx.fillRect(mx, my, mw * chAmt, mh);
+    // minimum-charge notch
+    ctx.fillStyle = '#eafaff';
+    ctx.fillRect(mx + mw * (CFG.AC.minCharge / CFG.AC.maxCharge) - 1, my - 2, 2, mh + 4);
+    if (ready) {
+      ctx.font = '700 11px Bungee, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = COL.gold; ctx.shadowBlur = 8;
+      ctx.fillText(chAmt >= 1 ? 'MAX!' : 'READY', xScreen, my - 8);
+    }
+    ctx.restore();
+  }
 }
 
 function render(now) {
